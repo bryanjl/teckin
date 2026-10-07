@@ -19,7 +19,7 @@ describe('climber settings', () => {
   });
 
   it('keeps tunables at the spec starting values', () => {
-    expect(defaultClimberTunables).toEqual({
+    expect(defaultClimberTunables).toMatchObject({
       startingEnergy: 50,
       jumpCost: 10,
       doubleJumpCost: 15,

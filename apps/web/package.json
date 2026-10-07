@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@teckin/climber": "workspace:*",
+    "@teckin/engine-core": "workspace:*",
     "@teckin/game-contracts": "workspace:*",
     "@teckin/ui": "workspace:*",
     "next": "16.4.0",

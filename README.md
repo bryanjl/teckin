@@ -36,6 +36,24 @@ The dev server listens on every network interface (`0.0.0.0`), so phones on the 
 Some phone features (screen wake lock, fullscreen) only work over HTTPS or on `localhost`; the
 game still plays without them over plain HTTP.
 
+## Playing the solo climb
+
+Open `/play/solo`. Controls:
+
+- **Phone or tablet:** on-screen buttons. Left and right sit bottom-left, jump bottom-right.
+  Hold a direction with one thumb and tap jump with the other. Tap jump again in mid-air to
+  double jump.
+- **Keyboard:** arrow keys or WASD to move; space, up arrow or W to jump.
+- The pause button is top-right. The game also pauses by itself when you switch apps or lock
+  the phone, and carries on when you come back.
+
+URL flags:
+
+| Flag       | What it does                                                                         |
+| ---------- | ------------------------------------------------------------------------------------ |
+| `?debug=1` | Shows fps, player position and held inputs, and draws physics bodies                 |
+| `?touch=1` | Shows the touch buttons on a laptop too (they appear by themselves on touch screens) |
+
 ## Commands
 
 | Command          | What it does                                                 |
