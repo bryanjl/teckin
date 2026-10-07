@@ -6,7 +6,8 @@ Each run takes the first unchecked milestone, finishes it, and ticks it. See `CL
 
 - [x] **M1.1 Monorepo foundation.** pnpm + Turborepo workspace, all packages from the spec scaffolded (stubs where unused), shared tsconfig/ESLint/Prettier, Vitest and Playwright wired, `.gitignore`, README with run instructions, GitHub Actions CI (lint, typecheck, test).
   - Done 2026-10-07. Next run starts with M1.2: add Phaser 4 to `packages/engine-core` (verify the v4 API first), mount it from `apps/web/src/app/play/solo/page.tsx` via a client-only dynamic import, and replace the placeholder there. The `ClientGameModule` contract is in `packages/game-contracts`. Run E2E locally with `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/pw-browsers/chromium-1194/chrome-linux/chrome` after `pnpm build`.
-- [ ] **M1.2 Engine core.** Phaser 4 boot inside Next.js `/play/solo` (client-only, lazy-loaded), scaling for portrait and landscape, input abstraction (keyboard + touch → actions), on-screen touch controls with multi-touch, safe areas, zoom/scroll/selection blocking, pause on tab hidden, wake lock.
+- [x] **M1.2 Engine core.** Phaser 4 boot inside Next.js `/play/solo` (client-only, lazy-loaded), scaling for portrait and landscape, input abstraction (keyboard + touch → actions), on-screen touch controls with multi-touch, safe areas, zoom/scroll/selection blocking, pause on tab hidden, wake lock.
+  - Done 2026-10-07. `/play/solo` boots a sandbox scene (rectangles) with touch + keyboard input, pause button, auto-pause on hidden, debug overlay (`?debug=1`). 36 E2E tests pass across the four device profiles. Next run starts with M1.3: SVG → atlas build script and theme pack loader in `engine-core` (a Phaser-free manifest/loader core plus a `/phaser` texture loader), placeholder theme in `games/climber/themes/placeholder`, then swap the sandbox rectangles for theme sprites. Use `pickTextureScale(renderResolution * zoom)` to choose 1x/2x/3x. Verify the rasteriser library's licence (e.g. `@resvg/resvg-js`, MPL-2.0) before adding it.
 - [ ] **M1.3 Art and themes.** SVG → atlas build script (1x/2x/3x), theme pack format and loader, neutral placeholder theme (player, tiles, background, UI icons).
 - [ ] **M1.4 Platformer kit and summits 1–2.** Player controller (coyote time, jump buffer, variable jump, double jump), Tiled JSON loader, camera follow, falling, checkpoints, summits 1 and 2, HUD, debug overlay, course-complete screen.
 - [ ] **M1.5 Phase 1 wrap-up.** All Phase 1 acceptance tests, deploy scripts for the web app (Bicep + manual-only workflow), `docs/demos/phase-1.md`, self-review and fixes.
@@ -41,6 +42,7 @@ Each run takes the first unchecked milestone, finishes it, and ticks it. See `CL
 Manual checks the build cannot do (real phones, real-world performance). Runs add items here.
 
 - Phase 1: play on a real iPhone and Android over the local network; check fps with `?debug=1`.
+- M1.2: on a real phone, check that pinch, double-tap and pull-to-refresh do nothing on `/play/solo`, that the touch buttons clear the notch and home bar, and that locking the phone mid-jump and unlocking resumes cleanly. Note the fps shown by `?debug=1` (render resolution is capped at 2x).
 
 ## Needs Bryan
 
@@ -51,3 +53,4 @@ Blockers with no workaround. Empty is good.
 One line per run: date (UTC), milestone, outcome.
 
 - 2026-10-07 — M1.1 Monorepo foundation — done (pnpm + Turborepo, all packages scaffolded, Next.js web app, realtime health stub, Vitest + Playwright, CI).
+- 2026-10-07 — M1.2 Engine core — done (Phaser 4.2.1 lazy boot, DOM input abstraction + multi-touch controls, safe areas, page guards, pause/wake lock, sandbox scene, unit + E2E tests).
