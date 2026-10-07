@@ -4,7 +4,8 @@ Each run takes the first unchecked milestone, finishes it, and ticks it. See `CL
 
 ## Phase 1: The game works on a phone
 
-- [ ] **M1.1 Monorepo foundation.** pnpm + Turborepo workspace, all packages from the spec scaffolded (stubs where unused), shared tsconfig/ESLint/Prettier, Vitest and Playwright wired, `.gitignore`, README with run instructions, GitHub Actions CI (lint, typecheck, test).
+- [x] **M1.1 Monorepo foundation.** pnpm + Turborepo workspace, all packages from the spec scaffolded (stubs where unused), shared tsconfig/ESLint/Prettier, Vitest and Playwright wired, `.gitignore`, README with run instructions, GitHub Actions CI (lint, typecheck, test).
+  - Done 2026-10-07. Next run starts with M1.2: add Phaser 4 to `packages/engine-core` (verify the v4 API first), mount it from `apps/web/src/app/play/solo/page.tsx` via a client-only dynamic import, and replace the placeholder there. The `ClientGameModule` contract is in `packages/game-contracts`. Run E2E locally with `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/pw-browsers/chromium-1194/chrome-linux/chrome` after `pnpm build`.
 - [ ] **M1.2 Engine core.** Phaser 4 boot inside Next.js `/play/solo` (client-only, lazy-loaded), scaling for portrait and landscape, input abstraction (keyboard + touch → actions), on-screen touch controls with multi-touch, safe areas, zoom/scroll/selection blocking, pause on tab hidden, wake lock.
 - [ ] **M1.3 Art and themes.** SVG → atlas build script (1x/2x/3x), theme pack format and loader, neutral placeholder theme (player, tiles, background, UI icons).
 - [ ] **M1.4 Platformer kit and summits 1–2.** Player controller (coyote time, jump buffer, variable jump, double jump), Tiled JSON loader, camera follow, falling, checkpoints, summits 1 and 2, HUD, debug overlay, course-complete screen.
@@ -48,3 +49,5 @@ Blockers with no workaround. Empty is good.
 ## Run log
 
 One line per run: date (UTC), milestone, outcome.
+
+- 2026-10-07 — M1.1 Monorepo foundation — done (pnpm + Turborepo, all packages scaffolded, Next.js web app, realtime health stub, Vitest + Playwright, CI).
