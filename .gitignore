@@ -13,3 +13,5 @@ test-results/
 .planning/
 .superpowers/
 .DS_Store
+*.tsbuildinfo
+next-env.d.ts

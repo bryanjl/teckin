@@ -1,0 +1,22 @@
+{
+  "name": "@teckin/engine-core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Phaser helpers shared by every game: boot, scaling, theme loading, input abstraction, touch controls.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@teckin/config": "workspace:*",
+    "@types/node": "22.20.5",
+    "eslint": "10.12.0",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3"
+  }
+}

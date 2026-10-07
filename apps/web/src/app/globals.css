@@ -1,0 +1,9 @@
+@import 'tailwindcss';
+@import '@teckin/config/tailwind/theme.css';
+
+html,
+body {
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}

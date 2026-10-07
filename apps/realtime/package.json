@@ -1,0 +1,25 @@
+{
+  "name": "realtime",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Realtime game server. Becomes the Colyseus server in Phase 3; for now it only serves a health endpoint.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@teckin/game-contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@teckin/config": "workspace:*",
+    "@types/node": "22.20.5",
+    "eslint": "10.12.0",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3"
+  }
+}
