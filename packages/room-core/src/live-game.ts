@@ -1,7 +1,8 @@
+import type { GamePhaseName } from '@teckin/game-contracts';
 import { checkNickname } from '@teckin/nicknames';
 
 /** Where a game is in its life. Every game shares these phases. */
-export type GamePhase = 'lobby' | 'countdown' | 'playing' | 'ended';
+export type GamePhase = GamePhaseName;
 
 /** Why a game ended. */
 export type GameEndReason = 'hostEnded' | 'timeUp' | 'goalReached' | 'abandoned';

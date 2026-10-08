@@ -24,6 +24,10 @@ export interface RoomConnection {
   request(type: string, payload?: unknown): Promise<unknown>;
   /** Listens for a message; returns an unsubscribe function. */
   onMessage(type: string, listener: (payload: unknown) => void): () => void;
+  /** The room's synchronised state as last received (absent in tests that do not need it). */
+  state?: () => unknown;
+  /** Listens for state updates; returns an unsubscribe function. */
+  onStateChange?: (listener: (state: unknown) => void) => () => void;
 }
 
 /** Options for {@link NetworkSession}. */
@@ -91,6 +95,8 @@ export class NetworkSession implements GameSession {
         return (await connection.request(type, payload)) as Reply;
       },
       onMessage: (type, listener) => connection.onMessage(type, listener),
+      roomState: () => connection.state?.(),
+      onStateChange: (listener) => connection.onStateChange?.(listener) ?? (() => {}),
     };
   }
 

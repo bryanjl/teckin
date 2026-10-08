@@ -45,15 +45,34 @@ export interface ResultStat {
   value: string;
 }
 
+/** One player's row in a shared leaderboard. */
+export interface PlayerStanding {
+  playerId: string;
+  /** From 1, never tied. */
+  rank: number;
+  nickname: string;
+  /** What the rank was decided by, formatted for display (for example "742 m"). */
+  scoreLabel: string;
+  /** A short second line, for example "4 summits · 80%". */
+  detail?: string;
+}
+
 /** What the shared results screen shows at the end of a game. */
 export interface GameResults {
   /** Heading, e.g. "Course complete". */
   title: string;
-  elapsedSeconds: number;
+  /** Time to show under the heading; omitted when time is not what the game ranks by. */
+  elapsedSeconds?: number;
   /** Game-specific rows shown under the time. */
   stats: ResultStat[];
   answers: AnswerSummary;
   appearance: ShellAppearance;
+  /** The room's final ranking in a multiplayer game, the same on every screen. */
+  standings?: {
+    rows: PlayerStanding[];
+    /** This device's player, highlighted in the list. */
+    ownPlayerId?: string;
+  };
 }
 
 /**
@@ -65,8 +84,12 @@ export interface ClientGameShell {
   session: GameSession;
   /** Opens the question sheet. Resolves when the player closes it. */
   openQuestionSheet(request: QuestionSheetRequest): Promise<void>;
-  /** Shows the results screen; `onPlayAgain` is called when the player asks to replay. */
-  showResults(results: GameResults, onPlayAgain: () => void): void;
+  /**
+   * Shows the results screen; `onPlayAgain` is called when the player asks to replay. A
+   * multiplayer game passes no `onPlayAgain` (the room cannot be replayed from a device) and
+   * the app offers its own way on instead.
+   */
+  showResults(results: GameResults, onPlayAgain?: () => void): void;
   /** Hides the results screen. */
   hideResults(): void;
   sound: GameSoundPlayer;

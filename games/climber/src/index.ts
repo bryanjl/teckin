@@ -7,3 +7,5 @@ export const climberGameId = 'climber';
 /** Working name of the Climber game (see docs/DECISIONS.md). */
 export const climberDisplayName = 'Cogspire';
 export * from './theme';
+export * from './live/climber-state-view';
+export * from './live/other-climbers';

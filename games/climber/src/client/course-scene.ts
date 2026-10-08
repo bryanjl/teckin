@@ -12,6 +12,8 @@ import { climberOptionalFrames } from '../theme';
 import { createClimberBot } from '../run/climber-bot';
 import { ClimberRun, type EnergyAccount } from '../run/climber-run';
 import { HazardArt } from './hazard-art';
+import { OtherClimbersArt, type OtherClimbersArtStyle } from './other-climbers-art';
+import type { OtherClimberPose } from '../live/other-climbers';
 import type { ClimberTunables } from '../tunables';
 
 /** Which theme atlas the scene loaded, for the debug overlay and tests. */
@@ -83,7 +85,15 @@ export interface CourseSceneOptions {
    * (for example while it tops up energy).
    */
   autopilotShouldWait?: () => boolean;
+  /** Other players to draw in a multiplayer game: where each is at a time, nearest first. */
+  otherClimbers?: {
+    source: { poses(nowMs: number, near: { x: number; y: number }): OtherClimberPose[] };
+    style: OtherClimbersArtStyle;
+  };
 }
+
+/** Draw order: other climbers behind this player, this player on top. */
+const depths = { otherClimbers: 10, energyGlow: 19, player: 20, energyKey: 21 } as const;
 
 const autopilotSource = 'autopilot';
 
@@ -101,6 +111,7 @@ export class CourseScene extends Phaser.Scene {
   private energyGlowArt?: Phaser.GameObjects.Image;
   private keyAngle = 0;
   private hazardArt?: HazardArt;
+  private otherClimbersArt?: OtherClimbersArt;
   private reducedMotion = false;
   private run!: ClimberRun;
   private stepper!: FixedStepper;
@@ -127,6 +138,11 @@ export class CourseScene extends Phaser.Scene {
       onGround: body.onGround,
       jumpsUsed: run.jumpsUsed,
     };
+  }
+
+  /** Other climbers drawn this frame (multiplayer only). */
+  visibleOtherClimbers(): number {
+    return this.otherClimbersArt?.visibleCount ?? 0;
   }
 
   /** HUD state right now. */
@@ -275,13 +291,29 @@ export class CourseScene extends Phaser.Scene {
     if (textures.hasFrame(climberOptionalFrames.energyGlow)) {
       this.energyGlowArt = textures
         .image(this, 0, 0, climberOptionalFrames.energyGlow)
-        .setOrigin(0.5, 0.5);
+        .setOrigin(0.5, 0.5)
+        .setDepth(depths.energyGlow);
     }
-    this.playerArt = textures.image(this, 0, 0, this.options.playerFrame).setOrigin(0.5, 1);
+    if (this.options.otherClimbers) {
+      this.otherClimbersArt = new OtherClimbersArt(
+        this,
+        textures,
+        this.options.otherClimbers.style,
+        depths.otherClimbers,
+      );
+    }
+    const playerFrame = textures.hasFrame(this.options.playerFrame)
+      ? this.options.playerFrame
+      : 'player';
+    this.playerArt = textures
+      .image(this, 0, 0, playerFrame)
+      .setOrigin(0.5, 1)
+      .setDepth(depths.player);
     if (textures.hasFrame(climberOptionalFrames.energyKey)) {
       this.energyKeyArt = textures
         .image(this, 0, 0, climberOptionalFrames.energyKey)
-        .setOrigin(0.5, 0.85);
+        .setOrigin(0.5, 0.85)
+        .setDepth(depths.energyKey);
     }
     this.syncPlayerArt(1);
 
@@ -316,6 +348,12 @@ export class CourseScene extends Phaser.Scene {
     }
     this.animateEnergy(deltaMs / 1000);
     this.hazardArt?.update();
+    if (this.otherClimbersArt && this.options.otherClimbers) {
+      this.otherClimbersArt.setLabelResolution(this.cameras.main.zoom);
+      this.otherClimbersArt.update(
+        this.options.otherClimbers.source.poses(performance.now(), this.run.foot),
+      );
+    }
     this.options.onFrame(this.hudState());
   }
 

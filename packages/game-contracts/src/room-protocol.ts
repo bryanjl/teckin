@@ -5,6 +5,46 @@ import { z } from 'zod';
  * clients both validate with these schemas; game-specific messages live with each game.
  */
 
+/** Where a game is in its life. Every game shares these phases. */
+export const gamePhases = ['lobby', 'countdown', 'playing', 'ended'] as const;
+
+/** One of {@link gamePhases}. */
+export type GamePhaseName = (typeof gamePhases)[number];
+
+/**
+ * A read-only map as clients see it in synchronised room state (a Colyseus `MapSchema` has
+ * this shape), so browser code can read state without importing the server's schema types.
+ */
+export interface StateMapView<Value> {
+  get(key: string): Value | undefined;
+  forEach(callback: (value: Value, key: string) => void): void;
+  readonly size: number;
+}
+
+/** One roster entry in synchronised room state. */
+export interface RosterPlayerView {
+  readonly id: string;
+  readonly nickname: string;
+  readonly connected: boolean;
+  readonly removed: boolean;
+}
+
+/** The synchronised state every room shares, as clients read it. Games add their own fields. */
+export interface RoomStateView {
+  readonly gameId: string;
+  readonly joinCode: string;
+  readonly phase: GamePhaseName;
+  readonly locked: boolean;
+  readonly allowLateJoin: boolean;
+  readonly maxPlayers: number;
+  /** Milliseconds left in the countdown while counting down, else 0. */
+  readonly countdownRemainingMs: number;
+  /** Milliseconds of play left once playing; the full duration before that. */
+  readonly remainingMs: number;
+  readonly endReason: string;
+  readonly players: StateMapView<RosterPlayerView>;
+}
+
 /** Options a player sends when joining a room. */
 export const playerJoinOptionsSchema = z.object({
   role: z.literal('player'),

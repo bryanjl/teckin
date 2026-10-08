@@ -29,6 +29,8 @@ function createChannel(placement: ClimberPlacement) {
       listeners.set(type, listener);
       return () => listeners.delete(type);
     },
+    roomState: () => undefined,
+    onStateChange: () => () => {},
   };
   return {
     channel,

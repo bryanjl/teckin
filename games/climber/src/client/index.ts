@@ -1,6 +1,7 @@
 import {
   PauseController,
   attachDebugOverlay,
+  formatTimeLeft,
   attachKeyboardSource,
   attachTouchControls,
   createPlatformerActionState,
@@ -16,6 +17,7 @@ import { bindPauseToGame, bootPhaserGame } from '@teckin/engine-core/phaser';
 import type {
   ClientGameModule,
   ClientGameMountOptions,
+  GamePhaseName,
   ShellAppearance,
 } from '@teckin/game-contracts';
 import { climberThemeRequirements, defaultClimberThemeId, resolveClimberThemeId } from '../theme';
@@ -33,9 +35,26 @@ import { attachPauseButton } from './pause-button';
 import { attachMuteButton } from './mute-button';
 import { createAutopilotAnswerer } from './autopilot-answerer';
 import { ClimberLink } from '../run/climber-link';
+import {
+  climberStandings,
+  climberVariantFor,
+  formatRank,
+  isClimberRoomState,
+  type ClimberRoomStateView,
+} from '../live/climber-state-view';
+import { OtherClimbers } from '../live/other-climbers';
 
 /** Lifecycle status written to the mount element's `data-game-status`. */
-export type ClimberGameStatus = 'loading' | 'running' | 'paused' | 'answering' | 'complete';
+export type ClimberGameStatus =
+  | 'loading'
+  | 'running'
+  | 'paused'
+  | 'answering'
+  | 'complete'
+  /** Multiplayer: in the lobby or the countdown, before the room starts the climb. */
+  | 'waiting'
+  /** Multiplayer: the room has ended the game. */
+  | 'ended';
 
 /** Read-only hooks exposed on `window.__teckinGame` with `?debug=1`, for tests and tuning. */
 export interface ClimberDebugHooks {
@@ -53,6 +72,8 @@ export interface ClimberDebugHooks {
   setAutopilot: (enabled: boolean) => void;
   /** Sends the player back to the start, keeping summits and time, as after a long fall. */
   dropToStart: () => void;
+  /** Multiplayer: other climbers drawn this frame. */
+  otherClimbersShown: () => number;
 }
 
 declare global {
@@ -125,29 +146,42 @@ async function mount(
       fontFamily,
     };
 
+    // In a multiplayer game the room owns the climb: position reports, corrections and the
+    // placement a rejoining device restores. The room decides the start, winner and ranking.
+    let link: ClimberLink | undefined;
+    const realtime = session.realtime;
+    /** The room's phase; solo play is always playing. */
+    let phase: GamePhaseName = realtime ? 'lobby' : 'playing';
+
     let complete = false;
     let answering = false;
     const runningStatus = (): ClimberGameStatus =>
-      complete
-        ? 'complete'
-        : pauseController.isPaused
-          ? 'paused'
-          : answering
-            ? 'answering'
-            : 'running';
+      phase === 'ended'
+        ? 'ended'
+        : complete
+          ? 'complete'
+          : phase !== 'playing'
+            ? 'waiting'
+            : pauseController.isPaused
+              ? 'paused'
+              : answering
+                ? 'answering'
+                : 'running';
+    // The climb only moves while the room is playing and the question sheet is closed.
+    const updateFrozen = (): void => scene.setFrozen(answering || phase !== 'playing');
 
     const openQuestions = async (): Promise<void> => {
-      if (answering || complete) return;
+      if (answering || complete || phase !== 'playing') return;
       answering = true;
       actions.releaseAll();
-      scene.setFrozen(true);
+      updateFrozen();
       setStatus(runningStatus());
       try {
         await shell.openQuestionSheet({ energyWord, appearance });
       } finally {
         answering = false;
         actions.releaseAll();
-        scene.setFrozen(false);
+        updateFrozen();
         if (ready) setStatus(runningStatus());
       }
     };
@@ -195,10 +229,7 @@ async function mount(
         : undefined;
     if (answerer) cleanups.push(answerer.stop);
 
-    // In a multiplayer game the room owns the climb: position reports, corrections and the
-    // placement a rejoining device restores. The room decides the winner and ranking.
-    let link: ClimberLink | undefined;
-    const realtime = session.realtime;
+    const others = realtime ? new OtherClimbers(realtime.playerId) : undefined;
 
     const playAgain = (): void => {
       shell.hideResults();
@@ -217,7 +248,15 @@ async function mount(
       course,
       theme,
       energy: session,
-      playerFrame: 'player-amber',
+      playerFrame: realtime ? `player-${climberVariantFor(realtime.playerId)}` : 'player-amber',
+      ...(others
+        ? {
+            otherClimbers: {
+              source: others,
+              style: { fontFamily, text: colour('text'), panel: colour('panel') },
+            },
+          }
+        : {}),
       checkpointsEnabled: options.flags.checkpoints === '1',
       autopilot,
       onRunCreated: (run) => {
@@ -232,6 +271,7 @@ async function mount(
       onStepped: (stepSeconds) => link?.afterStep(stepSeconds),
       onReady: () => {
         ready = true;
+        updateFrozen();
         setStatus(runningStatus());
       },
       onFrame: (state) => hud.update(state),
@@ -251,6 +291,11 @@ async function mount(
         actions.releaseAll();
         session.reportProgress({ type: 'finished', elapsedSeconds });
         sound.play('finish');
+        // The room ends the game for everyone and the shared results follow.
+        if (realtime) {
+          setStatus(runningStatus());
+          return;
+        }
         const summits = course.summits.length;
         shell.showResults(
           {
@@ -286,6 +331,64 @@ async function mount(
       backgroundColor: colour('background'),
     });
     cleanups.push(booted.destroy);
+
+    if (realtime) {
+      let resultsShown = false;
+      const showSharedResults = (state: ClimberRoomStateView): void => {
+        if (resultsShown) return;
+        resultsShown = true;
+        const rows = climberStandings(state);
+        const own = rows.find((row) => row.playerId === realtime.playerId);
+        const won = state.winnerId !== '' && state.winnerId === realtime.playerId;
+        const answers = session.answerSummary();
+        shell.showResults({
+          title: won ? 'You won!' : 'Game over',
+          stats: own
+            ? [
+                { label: 'Rank', value: `${formatRank(own.rank)} of ${rows.length}` },
+                { label: 'Best height', value: `${own.bestHeightMetres} m` },
+                {
+                  label: 'Summits reached',
+                  value: `${own.summitsReached} of ${state.summitCount}`,
+                },
+              ]
+            : [],
+          // The room's counts are the record; the device's log adds the missed questions.
+          answers: own
+            ? {
+                ...answers,
+                answered: own.answered,
+                correct: own.correct,
+                accuracy: own.answered === 0 ? 0 : own.correct / own.answered,
+              }
+            : answers,
+          appearance,
+          standings: { rows, ownPlayerId: realtime.playerId },
+        });
+      };
+      const onRoomState = (state: unknown): void => {
+        if (!isClimberRoomState(state)) return;
+        others?.ingest(state, performance.now());
+        if (state.phase !== phase) {
+          phase = state.phase;
+          if (phase === 'ended') {
+            actions.releaseAll();
+            if (!complete) sound.play('finish');
+          }
+          updateFrozen();
+          if (ready) setStatus(runningStatus());
+        }
+        const own = state.climbers.get(realtime.playerId);
+        hud.setRank(
+          phase === 'playing' && own && own.rank > 0
+            ? `${formatRank(own.rank)} of ${state.climbers.size} · ${formatTimeLeft(state.remainingMs)}`
+            : null,
+        );
+        if (phase === 'ended') showSharedResults(state);
+      };
+      cleanups.push(realtime.onStateChange(onRoomState));
+      onRoomState(realtime.roomState());
+    }
 
     cleanups.push(
       attachTouchControls(parent, actions, {
@@ -346,6 +449,7 @@ async function mount(
         correctOptionFor: (questionId) => shell.debugCorrectOptionFor?.(questionId),
         setAutopilot: (enabled) => scene.setAutopilot(enabled),
         dropToStart: () => scene.dropToStart(),
+        otherClimbersShown: () => scene.visibleOtherClimbers(),
       };
       window.__teckinGame = hooks;
       cleanups.push(() => {

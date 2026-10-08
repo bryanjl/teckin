@@ -1,10 +1,14 @@
 import type { GameResults } from '@teckin/game-contracts';
 import { useEffect, useRef } from 'react';
+import { Leaderboard } from './leaderboard';
 
 /** Props for {@link ResultsScreen}. */
 export interface ResultsScreenProps {
   results: GameResults;
-  onPlayAgain: () => void;
+  /** The main button's action; the button is left out without it. */
+  onPlayAgain?: () => void;
+  /** The main button's label (default "Play again"). */
+  actionLabel?: string;
 }
 
 /** Formats seconds as m:ss.t, e.g. 83.42 → "1:23.4". */
@@ -17,12 +21,18 @@ export function formatResultTime(seconds: number): string {
 
 /**
  * End-of-game screen shared by every game: time, the game's own stats, questions answered,
- * accuracy, and every missed question with its correct answer.
+ * accuracy, the room's ranking in a multiplayer game, and every missed question with its
+ * correct answer.
  */
-export function ResultsScreen({ results, onPlayAgain }: ResultsScreenProps) {
+export function ResultsScreen({
+  results,
+  onPlayAgain,
+  actionLabel = 'Play again',
+}: ResultsScreenProps) {
   const { appearance, answers } = results;
   const playAgainRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => playAgainRef.current?.focus({ preventScroll: true }), []);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => (playAgainRef.current ?? titleRef.current)?.focus({ preventScroll: true }), []);
   const accuracy = answers.answered === 0 ? '–' : `${Math.round(answers.accuracy * 100)}%`;
   const rows = [
     ...results.stats,
@@ -60,22 +70,26 @@ export function ResultsScreen({ results, onPlayAgain }: ResultsScreenProps) {
         }}
       >
         <h2
+          ref={titleRef}
+          tabIndex={-1}
           id="teckin-results-title"
           style={{ margin: 0, font: `800 32px/1.2 ${appearance.fontFamily}`, textAlign: 'center' }}
         >
           {results.title}
         </h2>
-        <p
-          data-testid="results-time"
-          style={{
-            margin: 0,
-            textAlign: 'center',
-            font: `700 24px ${appearance.fontFamily}`,
-            color: appearance.accent,
-          }}
-        >
-          Time {formatResultTime(results.elapsedSeconds)}
-        </p>
+        {results.elapsedSeconds === undefined ? null : (
+          <p
+            data-testid="results-time"
+            style={{
+              margin: 0,
+              textAlign: 'center',
+              font: `700 24px ${appearance.fontFamily}`,
+              color: appearance.accent,
+            }}
+          >
+            Time {formatResultTime(results.elapsedSeconds)}
+          </p>
+        )}
         <dl
           data-testid="results-stats"
           style={{
@@ -98,27 +112,37 @@ export function ResultsScreen({ results, onPlayAgain }: ResultsScreenProps) {
             </div>
           ))}
         </dl>
-        <button
-          ref={playAgainRef}
-          type="button"
-          data-testid="play-again-button"
-          onClick={onPlayAgain}
-          style={{
-            alignSelf: 'center',
-            minWidth: 180,
-            minHeight: 56,
-            padding: '0 28px',
-            borderRadius: 16,
-            border: 'none',
-            background: appearance.accent,
-            color: appearance.panel,
-            font: `700 20px ${appearance.fontFamily}`,
-            touchAction: 'manipulation',
-            cursor: 'pointer',
-          }}
-        >
-          Play again
-        </button>
+        {results.standings ? (
+          <Leaderboard
+            rows={results.standings.rows}
+            ownPlayerId={results.standings.ownPlayerId}
+            appearance={appearance}
+            title="Final ranking"
+          />
+        ) : null}
+        {onPlayAgain ? (
+          <button
+            ref={playAgainRef}
+            type="button"
+            data-testid="play-again-button"
+            onClick={onPlayAgain}
+            style={{
+              alignSelf: 'center',
+              minWidth: 180,
+              minHeight: 56,
+              padding: '0 28px',
+              borderRadius: 16,
+              border: 'none',
+              background: appearance.accent,
+              color: appearance.panel,
+              font: `700 20px ${appearance.fontFamily}`,
+              touchAction: 'manipulation',
+              cursor: 'pointer',
+            }}
+          >
+            {actionLabel}
+          </button>
+        ) : null}
         <section aria-labelledby="teckin-missed-title">
           <h3
             id="teckin-missed-title"

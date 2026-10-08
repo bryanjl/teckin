@@ -49,6 +49,13 @@ export interface RealtimeChannel {
   request<Reply>(type: string, payload?: unknown): Promise<Reply>;
   /** Listens for a game message from the room. Returns an unsubscribe function. */
   onMessage(type: string, listener: (payload: unknown) => void): () => void;
+  /**
+   * The room's synchronised state as last received (a {@link RoomStateView} plus the game's
+   * own fields), or `undefined` before the first state arrives. Read it; never change it.
+   */
+  roomState(): unknown;
+  /** Calls `listener` after every state update from the room. Returns an unsubscribe function. */
+  onStateChange(listener: (state: unknown) => void): () => void;
 }
 
 /**

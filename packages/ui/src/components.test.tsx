@@ -4,6 +4,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QuestionSheet, wrongAnswerRevealMs } from './question-sheet';
+import { Leaderboard } from './leaderboard';
 import { ResultsScreen, formatResultTime } from './results-screen';
 import { testAppearance } from './testing';
 
@@ -175,6 +176,66 @@ describe('ResultsScreen', () => {
       container.querySelector<HTMLButtonElement>('[data-testid="play-again-button"]')?.click(),
     );
     expect(onPlayAgain).toHaveBeenCalledOnce();
+  });
+
+  it('shows the room ranking with this player highlighted, and no time or button when not given', async () => {
+    await act(async () => {
+      root.render(
+        <ResultsScreen
+          results={{
+            title: 'Game over',
+            stats: [{ label: 'Rank', value: '2nd of 3' }],
+            answers: { answered: 2, correct: 1, accuracy: 0.5, missed: [] },
+            appearance: testAppearance,
+            standings: {
+              ownPlayerId: 'b',
+              rows: [
+                { playerId: 'a', rank: 1, nickname: 'Ada', scoreLabel: 'Top!' },
+                {
+                  playerId: 'b',
+                  rank: 2,
+                  nickname: 'Bo',
+                  scoreLabel: '420 m',
+                  detail: '2 summits',
+                },
+                { playerId: 'c', rank: 3, nickname: 'Cy', scoreLabel: '10 m' },
+              ],
+            },
+          }}
+        />,
+      );
+    });
+    expect(container.querySelector('[data-testid="results-time"]')).toBeNull();
+    expect(container.querySelector('[data-testid="play-again-button"]')).toBeNull();
+    const rows = [...container.querySelectorAll('[data-testid="leaderboard-row"]')];
+    expect(rows.map((row) => row.getAttribute('data-rank'))).toEqual(['1', '2', '3']);
+    const own = container.querySelector('[data-own="true"]');
+    expect(own?.textContent).toContain('Bo (you)');
+    expect(own?.textContent).toContain('420 m');
+    expect(document.activeElement?.id).toBe('teckin-results-title');
+  });
+
+  it('keeps this player in a shortened leaderboard', async () => {
+    const rows = Array.from({ length: 12 }, (_, index) => ({
+      playerId: `p${index}`,
+      rank: index + 1,
+      nickname: `Player ${index}`,
+      scoreLabel: `${100 - index} m`,
+    }));
+    await act(async () => {
+      root.render(
+        <Leaderboard rows={rows} ownPlayerId="p11" maxRows={5} appearance={testAppearance} />,
+      );
+    });
+    const shown = [...container.querySelectorAll('[data-testid="leaderboard-row"]')];
+    expect(shown.map((row) => row.getAttribute('data-player-id'))).toEqual([
+      'p0',
+      'p1',
+      'p2',
+      'p3',
+      'p4',
+      'p11',
+    ]);
   });
 
   it('formats times as minutes, seconds and tenths', () => {

@@ -13,3 +13,14 @@ export function formatDuration(seconds: number): string {
   if (hours > 0) return `${hours}:${pad(minutes)}:${pad(secs)}`;
   return `${minutes}:${pad(secs)}.${tenths % 10}`;
 }
+
+/**
+ * Formats time left on a game clock as `m:ss`, counting whole seconds up so the clock reads
+ * `0:01` until time is really out (`0:00`). Negative or non-finite input shows as `0:00`.
+ */
+export function formatTimeLeft(milliseconds: number): string {
+  const safe = Number.isFinite(milliseconds) && milliseconds > 0 ? milliseconds : 0;
+  const totalSeconds = Math.ceil(safe / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  return `${minutes}:${(totalSeconds % 60).toString().padStart(2, '0')}`;
+}

@@ -15,7 +15,7 @@ interface OpenSheet {
 
 interface ShownResults {
   results: GameResults;
-  onPlayAgain: () => void;
+  onPlayAgain?: () => void;
 }
 
 /**
@@ -69,7 +69,8 @@ export function SoloGame() {
             },
           });
         }),
-      showResults: (shown, onPlayAgain) => setResults({ results: shown, onPlayAgain }),
+      showResults: (shown, onPlayAgain) =>
+        setResults(onPlayAgain ? { results: shown, onPlayAgain } : { results: shown }),
       hideResults: () => setResults(undefined),
       ...(flags.debug === '1'
         ? { debugCorrectOptionFor: (questionId: string) => session.correctOptionFor(questionId) }

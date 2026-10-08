@@ -1,7 +1,7 @@
 import type { Room as SdkRoom } from '@colyseus/sdk';
 import { clientRequestTypes, type WelcomeMessage } from '@teckin/game-contracts';
 import type { CourseBot } from '@teckin/platformer-kit';
-import { NetworkSession, type RoomConnection } from '@teckin/session';
+import { NetworkSession, sdkRoomConnection, type SdkRoomLike } from '@teckin/session';
 import type { ClimberCourse } from '../src/course/course';
 import { createClimberBot } from '../src/run/climber-bot';
 import { ClimberLink } from '../src/run/climber-link';
@@ -20,15 +20,6 @@ export interface NetworkBotOptions {
   askBelow?: number;
   /** Answer until energy reaches this. */
   refillTo?: number;
-}
-
-/** Wraps a Colyseus SDK room as the session's {@link RoomConnection}. */
-export function roomConnection(room: SdkRoom): RoomConnection {
-  return {
-    send: (type, payload) => room.send(type, payload),
-    request: (type, payload) => room.request(type, payload),
-    onMessage: (type, listener) => room.onMessage(type, listener),
-  };
 }
 
 /**
@@ -59,7 +50,10 @@ export class NetworkBot {
   /** Sets a bot up on a joined room: who it is, its energy, and where the room has it. */
   static async start(room: SdkRoom, options: NetworkBotOptions): Promise<NetworkBot> {
     const welcome = (await room.request(clientRequestTypes.whoAmI)) as WelcomeMessage;
-    const session = await NetworkSession.connect(roomConnection(room), welcome.playerId);
+    const session = await NetworkSession.connect(
+      sdkRoomConnection(room as unknown as SdkRoomLike),
+      welcome.playerId,
+    );
     const run = new ClimberRun(options.course, options.tunables, session, false);
     const link = new ClimberLink(run, session.realtime);
     await link.restore();

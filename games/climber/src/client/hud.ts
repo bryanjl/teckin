@@ -28,6 +28,8 @@ export interface HudEnergy {
 export interface CourseHud {
   update: (state: CourseHudState) => void;
   setEnergy: (energy: HudEnergy) => void;
+  /** Shows a compact line such as "2nd of 5 · 4:32" (multiplayer), or hides it with `null`. */
+  setRank: (text: string | null) => void;
   remove: () => void;
 }
 
@@ -87,7 +89,16 @@ export function attachCourseHud(
     marginTop: '2px',
     whiteSpace: 'nowrap',
   } satisfies Partial<CSSStyleDeclaration>);
-  readout.append(height, summit);
+  const rank = document.createElement('div');
+  rank.dataset.testid = 'hud-rank';
+  Object.assign(rank.style, {
+    display: 'none',
+    font: `700 13px/1.2 ${theme.fontFamily}`,
+    color: theme.accent,
+    marginTop: '2px',
+    whiteSpace: 'nowrap',
+  } satisfies Partial<CSSStyleDeclaration>);
+  readout.append(height, summit, rank);
 
   const meter = document.createElement('button');
   meter.type = 'button';
@@ -170,6 +181,7 @@ export function attachCourseHud(
   let shownSummit = '';
   let shownRespawn = false;
   let shownEnergy = '';
+  let shownRank: string | null = null;
   return {
     update: (state) => {
       const nextHeight = `${state.heightMetres} m`;
@@ -195,6 +207,12 @@ export function attachCourseHud(
         'aria-label',
         `Get ${theme.energyWord.toLowerCase()}. ${theme.energyWord}: ${energy}`,
       );
+    },
+    setRank: (text) => {
+      if (text === shownRank) return;
+      shownRank = text;
+      rank.textContent = text ?? '';
+      rank.style.display = text === null ? 'none' : 'block';
     },
     remove: () => {
       meter.removeEventListener('click', actions.onGetEnergy);
