@@ -51,6 +51,24 @@ export interface QuestionSnapshot {
   questions: SnapshotQuestion[];
 }
 
+/** A whole set as the editor saves it: its fields and every question, in order. */
+export interface QuestionSetContent {
+  title: string;
+  description: string;
+  questions: QuestionInput[];
+}
+
+/**
+ * Thrown when a set was saved somewhere else (another tab or device) after the editor loaded
+ * it, so saving would silently throw that work away.
+ */
+export class StaleEditError extends Error {
+  constructor(public readonly currentUpdatedAt: Date) {
+    super('The question set changed after it was loaded');
+    this.name = 'StaleEditError';
+  }
+}
+
 /** Fields for a new game. */
 export interface NewGameSession {
   gameType: string;
@@ -96,32 +114,37 @@ async function orNotFound<Result>(recordType: string, work: () => Promise<Result
   }
 }
 
+/** Writes `questions` into a set in two queries, however many there are (imports reach 500). */
 async function createQuestions(
   transaction: Transaction,
   organisationId: string,
   questionSetId: string,
   questions: QuestionInput[],
 ) {
-  for (const [questionIndex, question] of questions.entries()) {
-    await transaction.question.create({
-      data: {
+  if (questions.length === 0) return;
+  const created = await transaction.question.createManyAndReturn({
+    data: questions.map((question, questionIndex) => ({
+      organisationId,
+      questionSetId,
+      position: questionIndex,
+      type: question.type,
+      prompt: question.prompt,
+      imageUrl: question.imageUrl ?? null,
+    })),
+    select: { id: true, position: true },
+  });
+  const idAtPosition = new Map(created.map((question) => [question.position, question.id]));
+  await transaction.answerOption.createMany({
+    data: questions.flatMap((question, questionIndex) =>
+      question.options.map((option, optionIndex) => ({
         organisationId,
-        questionSetId,
-        position: questionIndex,
-        type: question.type,
-        prompt: question.prompt,
-        imageUrl: question.imageUrl ?? null,
-        answerOptions: {
-          // The organisation comes from the question through the composite relation.
-          create: question.options.map((option, optionIndex) => ({
-            position: optionIndex,
-            text: option.text,
-            isCorrect: option.isCorrect,
-          })),
-        },
-      },
-    });
-  }
+        questionId: idAtPosition.get(questionIndex)!,
+        position: optionIndex,
+        text: option.text,
+        isCorrect: option.isCorrect,
+      })),
+    ),
+  });
 }
 
 const questionsInOrder = {
@@ -217,6 +240,71 @@ export function organisationData(database: PrismaClient, organisationId: string)
             where: { id: questionSetId },
             data: { updatedAt: new Date() },
           });
+        }),
+      /**
+       * Saves the title, description and every question in one transaction. With
+       * `expectedUpdatedAt` (when the editor loaded the set) it refuses with
+       * {@link StaleEditError} if the set was saved since, instead of overwriting that work.
+       */
+      save: (
+        questionSetId: string,
+        content: QuestionSetContent,
+        options: { expectedUpdatedAt?: Date } = {},
+      ) =>
+        database.$transaction(async (transaction) => {
+          const current = await transaction.questionSet.findFirst({
+            where: { id: questionSetId, ...inOrganisation },
+            select: { updatedAt: true },
+          });
+          if (!current) throw new RecordNotFoundError('QuestionSet');
+          if (
+            options.expectedUpdatedAt &&
+            current.updatedAt.getTime() !== options.expectedUpdatedAt.getTime()
+          ) {
+            throw new StaleEditError(current.updatedAt);
+          }
+          await transaction.question.deleteMany({ where: { questionSetId, ...inOrganisation } });
+          await createQuestions(transaction, organisationId, questionSetId, content.questions);
+          return transaction.questionSet.update({
+            where: { id: questionSetId },
+            data: {
+              title: content.title,
+              description: content.description,
+              updatedAt: new Date(),
+            },
+          });
+        }),
+      /** Copies a set with all its questions under a new title; the copy is the host's own. */
+      duplicate: (questionSetId: string, copy: { title: string; createdById?: string | null }) =>
+        database.$transaction(async (transaction) => {
+          const original = await transaction.questionSet.findFirst({
+            where: { id: questionSetId, ...inOrganisation },
+            include: { questions: questionsInOrder },
+          });
+          if (!original) throw new RecordNotFoundError('QuestionSet');
+          const created = await transaction.questionSet.create({
+            data: {
+              ...inOrganisation,
+              title: copy.title,
+              description: original.description,
+              createdById: copy.createdById ?? null,
+            },
+          });
+          await createQuestions(
+            transaction,
+            organisationId,
+            created.id,
+            original.questions.map((question) => ({
+              type: question.type,
+              prompt: question.prompt,
+              imageUrl: question.imageUrl,
+              options: question.answerOptions.map((option) => ({
+                text: option.text,
+                isCorrect: option.isCorrect,
+              })),
+            })),
+          );
+          return created;
         }),
       delete: (questionSetId: string) =>
         orNotFound('QuestionSet', () =>

@@ -4,6 +4,7 @@ import type { PrismaClient } from './client';
 import {
   organisationData,
   RecordNotFoundError,
+  StaleEditError,
   type OrganisationData,
   type QuestionInput,
   type QuestionSnapshot,
@@ -93,6 +94,13 @@ describeWithDatabase('organisation-scoped data access', (getDatabase) => {
       () => alphaData.questionSets.update(beta.set.id, { title: 'Taken over' }),
       () => alphaData.questionSets.replaceQuestions(beta.set.id, sampleQuestions('stolen')),
       () => alphaData.questionSets.delete(beta.set.id),
+      () =>
+        alphaData.questionSets.save(beta.set.id, {
+          title: 'Taken over',
+          description: '',
+          questions: sampleQuestions('stolen'),
+        }),
+      () => alphaData.questionSets.duplicate(beta.set.id, { title: 'Copied out' }),
       () => alphaData.gameSessions.markStarted(beta.game.id),
       () => alphaData.gameSessions.markEnded(beta.game.id),
       () => alphaData.gameSessions.delete(beta.game.id),
@@ -222,5 +230,81 @@ describeWithDatabase('organisation-scoped data access', (getDatabase) => {
       ]),
     ).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
     expect(await beta.data.gameSessions.get(beta.game.id)).not.toBeNull();
+  });
+
+  it('saves a whole set at once and refuses a save based on an old copy', async () => {
+    const set = await alphaData.questionSets.create({
+      title: 'Draft',
+      questions: sampleQuestions('draft', 2),
+    });
+    const loadedAt = set.updatedAt;
+    const saved = await alphaData.questionSets.save(
+      set.id,
+      { title: 'Final', description: 'Fractions', questions: sampleQuestions('final', 6) },
+      { expectedUpdatedAt: loadedAt },
+    );
+    expect(saved.updatedAt.getTime()).toBeGreaterThan(loadedAt.getTime());
+    const stored = await alphaData.questionSets.get(set.id);
+    expect(stored).toMatchObject({ title: 'Final', description: 'Fractions' });
+    expect(stored?.questions.map((question) => question.prompt)).toEqual(
+      sampleQuestions('final', 6).map((question) => question.prompt),
+    );
+    expect(stored?.questions[0]?.answerOptions.map((option) => option.text)).toEqual([
+      'Right',
+      'Wrong',
+      'Also wrong',
+    ]);
+
+    // A second tab still holding the first copy cannot overwrite the save above.
+    await expect(
+      alphaData.questionSets.save(
+        set.id,
+        { title: 'Old tab', description: '', questions: [] },
+        { expectedUpdatedAt: loadedAt },
+      ),
+    ).rejects.toBeInstanceOf(StaleEditError);
+    expect((await alphaData.questionSets.get(set.id))?.title).toBe('Final');
+  });
+
+  it('duplicates a set with its questions, leaving the original alone', async () => {
+    const copy = await alphaData.questionSets.duplicate(alpha.set.id, {
+      title: 'Copy of alpha set',
+      createdById: alpha.user.id,
+    });
+    expect(copy.id).not.toBe(alpha.set.id);
+    expect(copy.organisationId).toBe(alpha.organisation.id);
+    const [original, copied] = await Promise.all([
+      alphaData.questionSets.get(alpha.set.id),
+      alphaData.questionSets.get(copy.id),
+    ]);
+    const shape = (set: typeof original) =>
+      set?.questions.map((question) => ({
+        type: question.type,
+        prompt: question.prompt,
+        options: question.answerOptions.map(({ text, isCorrect }) => ({ text, isCorrect })),
+      }));
+    expect(shape(copied)).toEqual(shape(original));
+    expect(copied?.questions[0]?.id).not.toBe(original?.questions[0]?.id);
+
+    await alphaData.questionSets.save(copy.id, {
+      title: 'Changed copy',
+      description: '',
+      questions: [],
+    });
+    expect((await alphaData.questionSets.get(alpha.set.id))?.questions).toHaveLength(5);
+  });
+
+  it('writes a 500-question set quickly enough for one transaction', async () => {
+    const started = Date.now();
+    const big = await alphaData.questionSets.create({
+      title: 'Big import',
+      questions: sampleQuestions('big', 500),
+    });
+    expect(Date.now() - started).toBeLessThan(4000);
+    const stored = await alphaData.questionSets.get(big.id);
+    expect(stored?.questions).toHaveLength(500);
+    expect(stored?.questions[499]?.position).toBe(499);
+    expect(stored?.questions[499]?.prompt).toBe('big question 500');
+    expect(stored?.questions[499]?.answerOptions).toHaveLength(3);
   });
 });

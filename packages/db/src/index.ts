@@ -7,6 +7,7 @@
 export {
   organisationData,
   RecordNotFoundError,
+  StaleEditError,
   type AnswerOptionInput,
   type NewAnswerEvent,
   type NewGameSession,
@@ -14,6 +15,7 @@ export {
   type NewQuestionSet,
   type OrganisationData,
   type QuestionInput,
+  type QuestionSetContent,
   type QuestionSnapshot,
   type SnapshotQuestion,
 } from './organisation-data';
