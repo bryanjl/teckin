@@ -27,7 +27,8 @@
     "@teckin/ui": "workspace:*",
     "next": "16.4.0",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "uqr": "0.1.3"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

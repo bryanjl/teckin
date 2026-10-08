@@ -39,6 +39,7 @@ import {
   climberStandings,
   climberVariantFor,
   formatRank,
+  checkpointsSettingOf,
   isClimberRoomState,
   type ClimberRoomStateView,
 } from '../live/climber-state-view';
@@ -257,7 +258,10 @@ async function mount(
             },
           }
         : {}),
-      checkpointsEnabled: options.flags.checkpoints === '1',
+      // A live game follows the host's setting; solo play keeps the `?checkpoints=1` flag.
+      checkpointsEnabled: realtime
+        ? checkpointsSettingOf(realtime.roomState())
+        : options.flags.checkpoints === '1',
       autopilot,
       onRunCreated: (run) => {
         if (!realtime) return;

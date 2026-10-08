@@ -55,6 +55,8 @@ export const ClimberRoomState = RoomStateBase.extend(
     summitCount: t.uint8().default(0),
     /** Player id of the winner, once the game has ended with any players. */
     winnerId: t.string().default(''),
+    /** The host's checkpoints setting, so devices offer "Back to checkpoint" only when on. */
+    checkpointsEnabled: t.boolean().default(false),
   },
   'ClimberRoomState',
 );
@@ -100,6 +102,7 @@ export class ClimberRoom extends BaseGameRoom<ClimberRoomState> {
     this.limits = movementLimitsFor(this.course, this.tunables);
     this.walls = permanentWalls(this.course);
     this.state.summitCount = this.course.summits.length;
+    this.state.checkpointsEnabled = this.settings.checkpointsEnabled;
     const prices: Record<string, number> = {
       jump: this.tunables.jumpCost,
       airJump: this.tunables.doubleJumpCost,

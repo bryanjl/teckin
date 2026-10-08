@@ -27,6 +27,8 @@ export interface ClimberRoomStateView extends RoomStateView {
   readonly summitCount: number;
   /** Player id of the winner once the game has ended, else empty. */
   readonly winnerId: string;
+  /** The host's checkpoints setting. */
+  readonly checkpointsEnabled: boolean;
 }
 
 /** True when `state` looks like a Climber room's state (it has climbers and a roster). */
@@ -38,6 +40,14 @@ export function isClimberRoomState(state: unknown): state is ClimberRoomStateVie
     typeof candidate.climbers?.forEach === 'function' &&
     typeof candidate.players?.forEach === 'function'
   );
+}
+
+/**
+ * The host's checkpoints setting from a room state, or `false` when the state is missing
+ * or is not a Climber room's (checkpoints are off by default).
+ */
+export function checkpointsSettingOf(state: unknown): boolean {
+  return isClimberRoomState(state) && state.checkpointsEnabled === true;
 }
 
 /** One row of the Climber's ranking with everything the results and host screens show. */

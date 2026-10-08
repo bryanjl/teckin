@@ -64,6 +64,7 @@ function fakeState(climbers: FakeClimber[], extra: Partial<ClimberRoomStateView>
     climbers: progress,
     summitCount: 6,
     winnerId: '',
+    checkpointsEnabled: false,
     ...extra,
   } satisfies ClimberRoomStateView;
 }

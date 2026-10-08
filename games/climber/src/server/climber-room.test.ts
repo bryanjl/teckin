@@ -346,6 +346,15 @@ describe('ClimberRoom', () => {
     expect(room.state.climbers.get(bot.playerId)!.heightMetres).toBe(heightAtEnd);
   }, 30_000);
 
+  it("shares the host's checkpoints setting with every device", async () => {
+    const off = await createGame();
+    const on = await createGame({ checkpointsEnabled: true });
+    await waitFor(() => on.host.state.summitCount > 0, 'state');
+    await waitFor(() => off.host.state.summitCount > 0, 'state');
+    expect(off.host.state.checkpointsEnabled).toBe(false);
+    expect(on.host.state.checkpointsEnabled).toBe(true);
+  });
+
   it('uses the platform defaults for message limits outside tests', () => {
     configureRoomServices({ maxMessagesPerSecond: 60 });
     expect(roomServices.maxMessagesPerSecond).toBe(60);

@@ -9,3 +9,4 @@ export const climberDisplayName = 'Cogspire';
 export * from './theme';
 export * from './live/climber-state-view';
 export * from './live/other-climbers';
+export * from './live/tower-view';

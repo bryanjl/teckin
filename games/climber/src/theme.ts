@@ -15,6 +15,25 @@ export const climberPlayerVariants = [
   'white',
 ] as const;
 
+/** One of {@link climberPlayerVariants}. */
+export type ClimberPlayerVariant = (typeof climberPlayerVariants)[number];
+
+/**
+ * A flat colour for each player variant, for screens that draw players as dots instead of
+ * sprites (the host's tower view). They match the body colours of the default theme's
+ * variants, so a dot on the projector has the colour of that player's climber on the phones.
+ */
+export const climberVariantSwatches: Readonly<Record<ClimberPlayerVariant, string>> = {
+  amber: '#d4a24c',
+  red: '#d9534f',
+  green: '#4caf6e',
+  blue: '#4a8fd9',
+  purple: '#9a6ad9',
+  pink: '#e06aa8',
+  teal: '#3fb3a8',
+  white: '#d8dde8',
+};
+
 /** Everything the Climber game draws or names, which every Climber theme must supply. */
 export const climberThemeRequirements: ThemeRequirements = {
   frames: [
