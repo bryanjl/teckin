@@ -19,7 +19,13 @@ export function SoloGame() {
     const flags = Object.fromEntries(new URLSearchParams(window.location.search));
 
     import('@teckin/climber/client')
-      .then((module) => module.default.mount(target, { flags }))
+      .then((module) =>
+        module.default.mount(target, {
+          flags,
+          assetBaseUrl: '/game-assets/climber/',
+          themeId: process.env.NEXT_PUBLIC_CLIMBER_THEME,
+        }),
+      )
       .then((teardown) => {
         if (cancelled) teardown();
         else unmount = teardown;

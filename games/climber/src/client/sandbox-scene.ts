@@ -1,6 +1,20 @@
 import * as Phaser from 'phaser';
-import { computeWorldViewport, type ActionState, type PlatformerAction } from '@teckin/engine-core';
+import {
+  computeWorldViewport,
+  type ActionState,
+  type LoadedTheme,
+  type PlatformerAction,
+} from '@teckin/engine-core';
+import { ThemeTextures, chooseThemeTextureScale } from '@teckin/engine-core/phaser';
 import type { ClimberPhysicsTunables } from '../tunables';
+
+/** Which theme atlas the scene loaded, for the debug overlay and tests. */
+export interface ThemeSnapshot {
+  id: string;
+  textureScale: number;
+  /** True once the atlas texture is in Phaser's texture manager. */
+  loaded: boolean;
+}
 
 /** Read-only snapshot of the player, for the debug overlay and automated tests. */
 export interface PlayerSnapshot {
@@ -16,6 +30,10 @@ export interface PlayerSnapshot {
 export interface SandboxSceneOptions {
   actions: ActionState<PlatformerAction>;
   physics: ClimberPhysicsTunables;
+  /** Built theme pack whose atlas supplies every sprite. */
+  theme: LoadedTheme;
+  /** Atlas frame drawn for the player, e.g. `player-amber`. */
+  playerFrame: string;
   /** Called once the scene has created its world and is running. */
   onReady: () => void;
 }
@@ -35,14 +53,17 @@ const sandboxPlatforms: readonly [number, number, number][] = [
 const sandboxHeightTiles = 40;
 
 /**
- * Engine proof scene for M1.2: rectangles instead of art, a short staircase of platforms
- * and a player that runs, jumps and double jumps. It exists to prove boot, scaling, input,
- * pause and camera on a phone; M1.4 replaces it with the platformer-kit controller and
- * Tiled maps.
+ * Engine proof scene: a short staircase of platforms and a player that runs, jumps and
+ * double jumps, drawn entirely from the active theme's atlas. It proves boot, scaling,
+ * input, pause, camera and theme loading on a phone; M1.4 replaces it with the
+ * platformer-kit controller and Tiled maps. Physics bodies are plain invisible rectangles
+ * and the art follows them, so swapping art never changes collision.
  */
 export class SandboxScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Rectangle;
   private playerBody!: Phaser.Physics.Arcade.Body;
+  private playerArt!: Phaser.GameObjects.Image;
+  private themeTextures?: ThemeTextures;
   private jumpsUsed = 0;
 
   constructor(private readonly options: SandboxSceneOptions) {
@@ -64,27 +85,69 @@ export class SandboxScene extends Phaser.Scene {
     };
   }
 
+  /** The loaded theme atlas, or nothing before `preload` has run. */
+  themeSnapshot(): ThemeSnapshot {
+    const textures = this.themeTextures;
+    return {
+      id: this.options.theme.manifest.id,
+      textureScale: textures?.textureScale ?? 0,
+      loaded: textures ? this.textures.exists(textures.textureKey) : false,
+    };
+  }
+
+  preload(): void {
+    const renderResolution = 1 / this.scale.zoom;
+    const textures = new ThemeTextures(
+      this.options.theme,
+      chooseThemeTextureScale(renderResolution, this.currentViewport().zoom),
+    );
+    textures.queue(this.load);
+    this.themeTextures = textures;
+  }
+
   create(): void {
+    const textures = this.themeTextures;
+    if (!textures) throw new Error('The theme atlas was not queued');
     const { tileSize, worldWidthTiles } = this.options.physics;
     const worldWidth = worldWidthTiles * tileSize;
     const worldHeight = sandboxHeightTiles * tileSize;
     this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
 
-    this.add.rectangle(worldWidth / 2, worldHeight / 2, worldWidth, worldHeight, 0x1e293b);
+    textures.tiled(this, 0, 0, worldWidth, worldHeight, 'background');
 
+    const groundRow = Math.max(...sandboxPlatforms.map(([, row]) => row));
     const platforms = sandboxPlatforms.map(([column, row, width]) => {
+      textures.tiled(
+        this,
+        column * tileSize,
+        row * tileSize,
+        width * tileSize,
+        tileSize,
+        row === groundRow ? 'tile-ground' : 'tile-platform',
+      );
       const platform = this.add.rectangle(
         (column + width / 2) * tileSize,
         (row + 0.5) * tileSize,
         width * tileSize,
         tileSize,
-        0x64748b,
       );
+      platform.setVisible(false);
       this.physics.add.existing(platform, true);
       return platform;
     });
+    const [topColumn, topRow, topWidth] = sandboxPlatforms.reduce((highest, platform) =>
+      platform[1] < highest[1] ? platform : highest,
+    );
+    textures.image(
+      this,
+      (topColumn + topWidth / 2) * tileSize,
+      (topRow - 0.5) * tileSize,
+      'summit-marker',
+    );
 
-    this.player = this.add.rectangle(tileSize * 2, worldHeight - tileSize * 2, 22, 30, 0xf59e0b);
+    this.player = this.add.rectangle(tileSize * 2, worldHeight - tileSize * 2, 22, 30);
+    this.player.setVisible(false);
+    this.playerArt = textures.image(this, this.player.x, this.player.y, this.options.playerFrame);
     this.physics.add.existing(this.player);
     this.playerBody = this.player.body as Phaser.Physics.Arcade.Body;
     this.playerBody.setCollideWorldBounds(true);
@@ -96,8 +159,12 @@ export class SandboxScene extends Phaser.Scene {
     camera.setFollowOffset(0, this.options.physics.cameraLookAhead);
     this.fitCamera();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.fitCamera, this);
+    // Arcade physics syncs bodies on POST_UPDATE and registered first, so the art follows
+    // the body's final position for this frame.
+    this.events.on(Phaser.Scenes.Events.POST_UPDATE, this.syncPlayerArt, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.fitCamera, this);
+      this.events.off(Phaser.Scenes.Events.POST_UPDATE, this.syncPlayerArt, this);
     });
 
     this.options.onReady();
@@ -111,6 +178,7 @@ export class SandboxScene extends Phaser.Scene {
 
     const direction = Number(actions.isDown('moveRight')) - Number(actions.isDown('moveLeft'));
     body.setVelocityX(direction * physics.runSpeed);
+    if (direction !== 0) this.playerArt.setFlipX(direction < 0);
 
     if (actions.justPressed('jump') && this.jumpsUsed < 2) {
       body.setVelocityY(-physics.jumpVelocity);
@@ -118,17 +186,25 @@ export class SandboxScene extends Phaser.Scene {
     }
   }
 
-  private fitCamera(): void {
+  private syncPlayerArt(): void {
+    this.playerArt.setPosition(this.player.x, this.player.y);
+  }
+
+  private currentViewport(): ReturnType<typeof computeWorldViewport> {
     const { tileSize, worldWidthTiles, minimumVisibleHeightTiles } = this.options.physics;
     const renderResolution = 1 / this.scale.zoom;
-    const camera = this.cameras.main;
-    camera.setSize(this.scale.width, this.scale.height);
-    const viewport = computeWorldViewport({
+    return computeWorldViewport({
       screenWidth: this.scale.width / renderResolution,
       screenHeight: this.scale.height / renderResolution,
       worldWidth: worldWidthTiles * tileSize,
       minimumVisibleWorldHeight: minimumVisibleHeightTiles * tileSize,
     });
-    camera.setZoom(viewport.zoom * renderResolution);
+  }
+
+  private fitCamera(): void {
+    const renderResolution = 1 / this.scale.zoom;
+    const camera = this.cameras.main;
+    camera.setSize(this.scale.width, this.scale.height);
+    camera.setZoom(this.currentViewport().zoom * renderResolution);
   }
 }

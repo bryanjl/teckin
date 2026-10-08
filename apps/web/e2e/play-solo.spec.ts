@@ -197,3 +197,19 @@ test('touch controls sit inside the safe-area insets and are at least 72 px', as
     description: emulated ? 'insets emulated via CDP' : 'CDP inset emulation unavailable',
   });
 });
+
+test('the theme atlas loads at a texture scale matching the screen density', async ({ page }) => {
+  await openGame(page);
+  const theme = await page.evaluate(() => window.__teckinGame?.theme());
+  expect(theme).toMatchObject({ id: 'placeholder', loaded: true });
+  const devicePixelRatio = await page.evaluate(() => window.devicePixelRatio);
+  // Render resolution is capped at 2x, and the world nearly fills a phone's width.
+  expect(theme?.textureScale).toBe(devicePixelRatio >= 2 ? 2 : 1);
+  await expect(page.getByTestId('touch-jump').locator('svg')).toBeVisible();
+});
+
+test('an unknown theme falls back to the default theme instead of failing', async ({ page }) => {
+  await openGame(page, '?debug=1&theme=does-not-exist');
+  const theme = await page.evaluate(() => window.__teckinGame?.theme());
+  expect(theme).toMatchObject({ id: 'placeholder', loaded: true });
+});

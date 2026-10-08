@@ -49,10 +49,29 @@ Open `/play/solo`. Controls:
 
 URL flags:
 
-| Flag       | What it does                                                                         |
-| ---------- | ------------------------------------------------------------------------------------ |
-| `?debug=1` | Shows fps, player position and held inputs, and draws physics bodies                 |
-| `?touch=1` | Shows the touch buttons on a laptop too (they appear by themselves on touch screens) |
+| Flag          | What it does                                                                         |
+| ------------- | ------------------------------------------------------------------------------------ |
+| `?debug=1`    | Shows fps, player position and held inputs, and draws physics bodies                 |
+| `?touch=1`    | Shows the touch buttons on a laptop too (they appear by themselves on touch screens) |
+| `?theme=<id>` | Loads another theme pack (a folder name in `games/climber/themes`)                   |
+
+## Art and theme packs
+
+All art is SVG. A theme pack is a folder in `games/climber/themes/<id>/`:
+
+- `theme.json`: display name, names shown to players (game title, energy word, summit
+  names), colour tokens, font stack, and colour variants of sprites (hue swaps of one SVG,
+  e.g. the eight player colours).
+- `sprites/*.svg`: in-world art (player, tiles, background, markers), sized in world pixels
+  (one tile is 32).
+- `ui/*.svg`: interface icons drawn with `currentColor`.
+
+`pnpm build` (and `pnpm dev`) rasterise every pack into texture atlases at 1x, 2x and 3x plus a
+`theme.manifest.json` in `games/climber/dist/themes/`, then copy them into
+`apps/web/public/game-assets/`. The game picks the atlas resolution that matches the screen.
+To rebuild art alone: `pnpm --filter @teckin/climber build`. The default theme is set with
+`NEXT_PUBLIC_CLIMBER_THEME` (see `apps/web/.env.example`). A theme missing anything the game
+needs fails the unit tests, and at runtime falls back to the default theme.
 
 ## Commands
 
@@ -93,6 +112,7 @@ docs/               Spec, progress, decisions, demos
 ```
 
 Workspace packages ship TypeScript source directly (no build step); Next.js compiles them via
-`transpilePackages`, and Vitest and `tsx` run them as-is.
+`transpilePackages`, and Vitest and `tsx` run them as-is. The one build step is the Climber
+art build described above.
 
 Shared packages never import from a game. Games import from shared packages.

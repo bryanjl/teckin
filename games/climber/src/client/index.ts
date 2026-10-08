@@ -6,14 +6,17 @@ import {
   createPlatformerActionState,
   guardPlaySurface,
   holdScreenWakeLock,
+  loadThemeManifest,
   pauseWhenHidden,
   platformerKeyBindings,
   platformerTouchButtons,
+  type LoadedTheme,
 } from '@teckin/engine-core';
 import { bindPauseToGame, bootPhaserGame } from '@teckin/engine-core/phaser';
 import type { ClientGameModule, ClientGameMountOptions } from '@teckin/game-contracts';
+import { climberThemeRequirements, defaultClimberThemeId, resolveClimberThemeId } from '../theme';
 import { defaultClimberTunables } from '../tunables';
-import { SandboxScene, type PlayerSnapshot } from './sandbox-scene';
+import { SandboxScene, type PlayerSnapshot, type ThemeSnapshot } from './sandbox-scene';
 import { attachPauseButton } from './pause-button';
 
 /** Lifecycle status written to the mount element's `data-game-status`. */
@@ -22,6 +25,7 @@ export type ClimberGameStatus = 'loading' | 'running' | 'paused';
 /** Read-only hooks exposed on `window.__teckinGame` with `?debug=1`, for tests and tuning. */
 export interface ClimberDebugHooks {
   player: () => PlayerSnapshot;
+  theme: () => ThemeSnapshot;
   heldActions: () => string[];
   status: () => ClimberGameStatus;
   fps: () => number;
@@ -56,6 +60,11 @@ async function mount(
   if (window.getComputedStyle(parent).position === 'static') parent.style.position = 'relative';
   parent.style.overflow = 'hidden';
 
+  const theme = await loadClimberTheme(options);
+  const { colours, fontFamily } = theme.manifest.tokens;
+  const ui = theme.manifest.ui;
+  const colour = (name: string): string => colours[name] ?? '#000000';
+
   const cleanups: (() => void)[] = [];
   const actions = createPlatformerActionState();
   const pauseController = new PauseController();
@@ -68,6 +77,8 @@ async function mount(
   const scene = new SandboxScene({
     actions,
     physics,
+    theme,
+    playerFrame: 'player-amber',
     onReady: () => {
       ready = true;
       setStatus(pauseController.isPaused ? 'paused' : 'running');
@@ -76,7 +87,7 @@ async function mount(
   const booted = bootPhaserGame({
     parent,
     scenes: [scene],
-    backgroundColor: '#0f172a',
+    backgroundColor: colour('background'),
     gravityY: physics.gravity,
     debugPhysics: debug,
   });
@@ -84,11 +95,22 @@ async function mount(
 
   cleanups.push(
     attachTouchControls(parent, actions, {
-      buttons: platformerTouchButtons,
+      buttons: platformerTouchButtons.map((button) => ({
+        ...button,
+        iconSvg: ui[touchIconByAction[button.action]] ?? button.iconSvg,
+      })),
       visibility: options.flags.touch === '1' ? 'always' : 'auto',
     }),
   );
-  cleanups.push(attachPauseButton(parent, pauseController));
+  cleanups.push(
+    attachPauseButton(parent, pauseController, {
+      iconSvg: ui.pause ?? '',
+      accent: colour('accent'),
+      text: colour('text'),
+      panel: colour('panel'),
+      fontFamily,
+    }),
+  );
 
   cleanups.push(bindPauseToGame(booted.game, pauseController));
   cleanups.push(
@@ -103,6 +125,7 @@ async function mount(
   if (debug) {
     const hooks: ClimberDebugHooks = {
       player: () => scene.snapshot(),
+      theme: () => scene.themeSnapshot(),
       heldActions: () => actions.heldActions(),
       status: () => (parent.dataset.gameStatus as ClimberGameStatus | undefined) ?? 'loading',
       fps: () => Math.round(booted.game.loop.actualFps),
@@ -120,7 +143,7 @@ async function mount(
           `vx ${player.velocityX} vy ${player.velocityY}`,
           `ground ${player.onGround ? 'yes' : 'no'} jumps ${player.jumpsUsed}`,
           `input ${hooks.heldActions().join(' ') || '-'}`,
-          `res ${booted.renderResolution}x`,
+          `res ${booted.renderResolution}x art ${hooks.theme().textureScale}x ${hooks.theme().id}`,
         ];
       }),
     );
@@ -131,6 +154,29 @@ async function mount(
     delete parent.dataset.gameStatus;
   };
 }
+
+/**
+ * Loads the chosen theme, falling back to the default one when the chosen theme is
+ * missing or incomplete, so a bad link or setting still gives a playable game.
+ */
+async function loadClimberTheme(options: ClientGameMountOptions): Promise<LoadedTheme> {
+  const themeUrl = (id: string): string => `${options.assetBaseUrl}themes/${id}/`;
+  const themeId = resolveClimberThemeId(options.flags.theme, options.themeId);
+  try {
+    return await loadThemeManifest(themeUrl(themeId), climberThemeRequirements);
+  } catch (error) {
+    if (themeId === defaultClimberThemeId) throw error;
+    console.warn(`Theme "${themeId}" could not be loaded; using the default theme`, error);
+    return loadThemeManifest(themeUrl(defaultClimberThemeId), climberThemeRequirements);
+  }
+}
+
+/** Theme UI icon drawn on each touch button. */
+const touchIconByAction = {
+  moveLeft: 'move-left',
+  moveRight: 'move-right',
+  jump: 'jump',
+} as const;
 
 /** The Climber game's lazily loaded client module. */
 const climberClient: ClientGameModule = { mount };

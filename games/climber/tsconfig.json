@@ -1,5 +1,5 @@
 {
   "extends": "@teckin/config/tsconfig/library.json",
   "compilerOptions": {},
-  "include": ["src"]
+  "include": ["src", "scripts"]
 }

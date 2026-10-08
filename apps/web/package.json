@@ -5,7 +5,9 @@
   "description": "Next.js web app: site, host dashboard, join and play pages.",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/copy-game-assets.mjs",
     "dev": "next dev --hostname 0.0.0.0 --port 3000",
+    "prebuild": "node scripts/copy-game-assets.mjs",
     "build": "next build",
     "start": "next start --hostname 0.0.0.0 --port 3000",
     "lint": "eslint .",

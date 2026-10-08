@@ -1,0 +1,33 @@
+{
+  "id": "placeholder",
+  "displayName": "Placeholder",
+  "names": {
+    "gameTitle": "Climber",
+    "energyWord": "Energy",
+    "summitNames": ["Summit 1", "Summit 2", "Summit 3", "Summit 4", "Summit 5", "Summit 6"]
+  },
+  "tokens": {
+    "colours": {
+      "background": "#1e293b",
+      "background-far": "#172033",
+      "platform": "#64748b",
+      "accent": "#f59e0b",
+      "text": "#f8fafc",
+      "text-muted": "#cbd5e1",
+      "panel": "#0f172a"
+    },
+    "fontFamily": "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+  },
+  "spriteVariants": {
+    "player": [
+      { "id": "amber", "replace": {} },
+      { "id": "red", "replace": { "#f59e0b": "#ef4444", "#fcd34d": "#fca5a5" } },
+      { "id": "green", "replace": { "#f59e0b": "#22c55e", "#fcd34d": "#86efac" } },
+      { "id": "blue", "replace": { "#f59e0b": "#3b82f6", "#fcd34d": "#93c5fd" } },
+      { "id": "purple", "replace": { "#f59e0b": "#a855f7", "#fcd34d": "#d8b4fe" } },
+      { "id": "pink", "replace": { "#f59e0b": "#ec4899", "#fcd34d": "#f9a8d4" } },
+      { "id": "teal", "replace": { "#f59e0b": "#14b8a6", "#fcd34d": "#5eead4" } },
+      { "id": "white", "replace": { "#f59e0b": "#e2e8f0", "#fcd34d": "#ffffff" } }
+    ]
+  }
+}
