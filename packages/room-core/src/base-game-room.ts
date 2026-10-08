@@ -9,11 +9,20 @@ import {
   roomJoinOptionsSchema,
   roomSettingsSchema,
   serverMessageTypes,
+  answerRequestSchema,
+  sessionMessageTypes,
+  sessionRequestTypes,
+  spendBatchSchema,
+  type AnswerReply,
+  type EnergyState,
   type HostCommandRejectedMessage,
   type JoinRefusal,
+  type PresentedQuestion,
   type RoomSettings,
+  type SessionRefusal,
   type WelcomeMessage,
 } from '@teckin/game-contracts';
+import { isSampleQuestionSetId, sampleQuestionSets, type QuestionSet } from '@teckin/questions';
 import { z } from 'zod';
 import { createJoinCodeRegistry, type JoinCodeRegistry } from './join-codes';
 import {
@@ -23,6 +32,12 @@ import {
   type LivePlayer,
   type NicknameCheck,
 } from './live-game';
+import {
+  QuestionSessions,
+  type AnswerResult,
+  type AppliedSpend,
+  type EnergyRules,
+} from './question-sessions';
 import { RosterPlayer, RoomStateBase } from './room-state';
 import type { SessionRecorder } from './session-recorder';
 
@@ -44,6 +59,8 @@ export const gameRoomCreateOptionsSchema = z.object({
   }),
   /** The game's own settings, validated by the game's room. */
   gameSettings: z.unknown().optional(),
+  /** Question set players answer; resolved by {@link RoomServices.loadQuestionSet}. */
+  questionSetId: z.string().min(1).max(64).default('maths'),
 });
 
 /** Parsed create options. */
@@ -60,6 +77,19 @@ export interface RoomServices {
   reconnectSeconds: number;
   /** Clock, replaceable in tests. */
   now: () => number;
+  /**
+   * Loads a question set by id. Phase 3 serves the bundled sample sets; Phase 4 reads the
+   * host's sets from the database.
+   */
+  loadQuestionSet: (questionSetId: string) => QuestionSet | Promise<QuestionSet>;
+}
+
+/** Serves the bundled sample question sets by id. */
+export function loadSampleQuestionSet(questionSetId: string): QuestionSet {
+  if (!isSampleQuestionSetId(questionSetId)) {
+    throw new Error(`Unknown question set "${questionSetId}"`);
+  }
+  return sampleQuestionSets[questionSetId];
 }
 
 /** The services every room reads. Change fields with {@link configureRoomServices}. */
@@ -69,6 +99,7 @@ export const roomServices: RoomServices = {
   checkNickname: null,
   reconnectSeconds: 180,
   now: () => Date.now(),
+  loadQuestionSet: loadSampleQuestionSet,
 };
 
 /** Sets process-wide room services (recorder, nickname check, reconnect window). */
@@ -82,6 +113,11 @@ export type RoomClientData = { role: 'host' } | { role: 'player'; playerId: stri
 const tickIntervalMs = 250;
 /** Join codes outlive the room a little, so a code is never reused mid-game after a slow tick. */
 const joinCodeTtlSeconds = 30 * 60;
+/**
+ * Messages a connection may send per second before Colyseus drops it. Players send about
+ * ten position reports and a few spend batches a second; this leaves room for bursts.
+ */
+const maxMessagesPerSecond = 60;
 /** An ended game stays open this long so everyone can read the results. */
 const endedRoomLingerMs = 10 * 60_000;
 /** A game with nobody connected (host included) is closed after this long. */
@@ -107,6 +143,9 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
   protected liveGame!: LiveGame;
   protected joinCode = '';
   protected gameId = '';
+  /** Players' questions and energy, once the game called {@link enableQuestionSessions}. */
+  protected questionSessions: QuestionSessions | null = null;
+  private questionSetId = '';
   private hostKeyHash = '';
   private joinCodes!: JoinCodeRegistry;
   private readonly sessionIdByPlayerId = new Map<string, string>();
@@ -125,7 +164,9 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
     const settings: RoomSettings = options.settings;
     this.gameId = options.gameId;
     this.hostKeyHash = options.hostKeyHash;
+    this.questionSetId = options.questionSetId;
     this.autoDispose = false;
+    this.maxMessagesPerSecond = maxMessagesPerSecond;
     // Room cap plus a few seats for host screens (laptop and projector).
     this.maxClients = settings.maxPlayers + 4;
     this.liveGame = new LiveGame(
@@ -270,6 +311,24 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
     }
   }
 
+  /**
+   * Turns on server-side questions and energy for players: the question, answer and energy
+   * requests and spend messages of the session protocol. Question-powered games call this
+   * from {@link onGameCreated}.
+   */
+  protected async enableQuestionSessions(rules: EnergyRules): Promise<void> {
+    const questionSet = await roomServices.loadQuestionSet(this.questionSetId);
+    this.questionSessions = new QuestionSessions(questionSet, rules, this.roomId, () => this.now());
+    this.onMessage(sessionRequestTypes.question, (client: Client) => this.handleQuestion(client));
+    this.onMessage(sessionRequestTypes.answer, (client: Client, message: unknown) =>
+      this.handleAnswer(client, message),
+    );
+    this.onMessage(sessionRequestTypes.energy, (client: Client) => this.handleEnergy(client));
+    this.onMessage(sessionMessageTypes.spend, (client: Client, message: unknown) =>
+      this.handleSpend(client, message),
+    );
+  }
+
   /** The current time from the room services clock. */
   protected now(): number {
     return roomServices.now();
@@ -313,6 +372,71 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
   protected onLifecycleEvent(_event: LiveGameEvent): void {}
   /** Every tick (4 times a second), after timers advanced. */
   protected onTick(_nowMs: number): void {}
+  /** After the server applied a player's spends (some may be unpaid). */
+  protected onEnergySpent(_playerId: string, _spends: readonly AppliedSpend[]): void {}
+  /** After the server graded a player's answer. */
+  protected onAnswered(_playerId: string, _result: AnswerResult & { ok: true }): void {}
+
+  /** The player id of a client allowed to use questions and energy now, or a refusal. */
+  private sessionPlayer(client: Client): { playerId: string } | { refusal: SessionRefusal } {
+    const playerId = this.playerIdOf(client);
+    const player = playerId === null ? undefined : this.liveGame.player(playerId);
+    if (playerId === null || !player || player.removedAtMs !== undefined) {
+      return { refusal: 'notAPlayer' };
+    }
+    if (!this.questionSessions) return { refusal: 'questionsUnavailable' };
+    if (this.liveGame.phase !== 'playing') return { refusal: 'notPlaying' };
+    return { playerId };
+  }
+
+  private handleQuestion(client: Client): PresentedQuestion {
+    const found = this.sessionPlayer(client);
+    if ('refusal' in found) throw new Error(found.refusal);
+    return this.questionSessions!.forPlayer(found.playerId).question();
+  }
+
+  private handleAnswer(client: Client, message: unknown): AnswerReply {
+    const found = this.sessionPlayer(client);
+    if ('refusal' in found) throw new Error(found.refusal);
+    const parsed = answerRequestSchema.safeParse(message);
+    if (!parsed.success) throw new Error('invalidAnswer' satisfies SessionRefusal);
+    const session = this.questionSessions!.forPlayer(found.playerId);
+    const result = session.answer(parsed.data.questionId, parsed.data.chosenOptionId);
+    if (!result.ok) throw new Error(result.reason);
+    this.record({
+      type: 'answer',
+      sessionId: this.roomId,
+      playerId: found.playerId,
+      questionId: result.event.questionId,
+      chosenOptionId: result.event.chosenOptionId,
+      isCorrect: result.event.isCorrect,
+      millisecondsTaken: result.event.millisecondsTaken,
+      atMs: this.now(),
+    });
+    this.onAnswered(found.playerId, result);
+    return { outcome: result.outcome, energyState: session.state };
+  }
+
+  private handleEnergy(client: Client): EnergyState {
+    const playerId = this.playerIdOf(client);
+    if (playerId === null || !this.questionSessions || !this.liveGame.player(playerId)) {
+      throw new Error('notAPlayer' satisfies SessionRefusal);
+    }
+    return this.questionSessions.forPlayer(playerId).state;
+  }
+
+  private handleSpend(client: Client, message: unknown): void {
+    const found = this.sessionPlayer(client);
+    const parsed = spendBatchSchema.safeParse(message);
+    if ('refusal' in found || !parsed.success) {
+      return;
+    }
+    const session = this.questionSessions!.forPlayer(found.playerId);
+    const applied = session.applySpends(parsed.data.firstSeq, parsed.data.reasons);
+    if (applied.length === 0) return;
+    this.onEnergySpent(found.playerId, applied);
+    client.send(sessionMessageTypes.energyChanged, session.state);
+  }
 
   private bindPlayer(client: Client, player: LivePlayer): void {
     const previousSessionId = this.sessionIdByPlayerId.get(player.id);

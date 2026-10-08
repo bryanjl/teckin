@@ -17,6 +17,7 @@
     "@colyseus/core": "0.18.18",
     "@colyseus/schema": "5.0.36",
     "@teckin/game-contracts": "workspace:*",
+    "@teckin/questions": "workspace:*",
     "zod": "4.6.5"
   },
   "devDependencies": {
