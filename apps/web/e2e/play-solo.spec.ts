@@ -213,3 +213,34 @@ test('an unknown theme falls back to the default theme instead of failing', asyn
   const theme = await page.evaluate(() => window.__teckinGame?.theme());
   expect(theme).toMatchObject({ id: 'placeholder', loaded: true });
 });
+
+test('the HUD shows the height in metres and the summit being climbed', async ({ page }) => {
+  await openGame(page);
+  await expect(page.getByTestId('hud-height')).toHaveText('0 m');
+  await expect(page.getByTestId('hud-summit')).toHaveText('Summit 1');
+});
+
+test('the course can be climbed from the start to the top of summit 2', async ({ page }) => {
+  test.setTimeout(150_000);
+  // The autopilot presses the same actions a player does, through the same input state.
+  await openGame(page, '?debug=1&autopilot=1');
+  await expect
+    .poll(async () => page.evaluate(() => window.__teckinGame?.course().summitsReached), {
+      timeout: 120_000,
+      intervals: [1_000],
+    })
+    .toBeGreaterThanOrEqual(1);
+  await expect(page.getByTestId('hud-summit')).toHaveText('Summit 2');
+  await expect(page.getByTestId('course-complete')).toBeVisible({ timeout: 120_000 });
+  await expect(page.getByTestId('game-root')).toHaveAttribute('data-game-status', 'complete');
+  await expect(page.getByTestId('course-time')).toHaveText(/^Time \d+:\d\d\.\d$/);
+  const finish = await page.evaluate(() => window.__teckinGame?.course());
+  expect(finish?.heightMetres).toBeGreaterThanOrEqual(333);
+
+  await page.getByTestId('play-again-button').tap();
+  await expect(page.getByTestId('course-complete')).toBeHidden();
+  await expect(page.getByTestId('game-root')).toHaveAttribute('data-game-status', 'running');
+  const restarted = await page.evaluate(() => window.__teckinGame?.course());
+  expect(restarted?.summitsReached).toBe(0);
+  expect(restarted?.elapsedSeconds).toBeLessThan(5);
+});

@@ -44,16 +44,20 @@ Open `/play/solo`. Controls:
   Hold a direction with one thumb and tap jump with the other. Tap jump again in mid-air to
   double jump.
 - **Keyboard:** arrow keys or WASD to move; space, up arrow or W to jump.
+- Climb to the top of summit 2. The top of the screen shows your height in metres and the
+  summit you are climbing; reaching the last summit shows your time and "Play again".
 - The pause button is top-right. The game also pauses by itself when you switch apps or lock
   the phone, and carries on when you come back.
 
 URL flags:
 
-| Flag          | What it does                                                                         |
-| ------------- | ------------------------------------------------------------------------------------ |
-| `?debug=1`    | Shows fps, player position and held inputs, and draws physics bodies                 |
-| `?touch=1`    | Shows the touch buttons on a laptop too (they appear by themselves on touch screens) |
-| `?theme=<id>` | Loads another theme pack (a folder name in `games/climber/themes`)                   |
+| Flag                   | What it does                                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------------ |
+| `?debug=1`             | Shows fps, player position, held inputs, summits and time                                        |
+| `?checkpoints=1`       | Each summit reached becomes a checkpoint; a "Back to checkpoint" button appears after a big fall |
+| `?debug=1&autopilot=1` | A bot climbs the course (used by the automated tests)                                            |
+| `?touch=1`             | Shows the touch buttons on a laptop too (they appear by themselves on touch screens)             |
+| `?theme=<id>`          | Loads another theme pack (a folder name in `games/climber/themes`)                               |
 
 ## Art and theme packs
 
@@ -72,6 +76,15 @@ All art is SVG. A theme pack is a folder in `games/climber/themes/<id>/`:
 To rebuild art alone: `pnpm --filter @teckin/climber build`. The default theme is set with
 `NEXT_PUBLIC_CLIMBER_THEME` (see `apps/web/.env.example`). A theme missing anything the game
 needs fails the unit tests, and at runtime falls back to the default theme.
+
+## Levels
+
+Levels are [Tiled](https://www.mapeditor.org/) maps saved as JSON (`games/climber/maps/course.json`).
+Tileset tiles carry two custom properties: `frame` (the theme sprite to draw) and `collision`
+(`solid`, or `oneWay` for ledges you can jump up through). Object layers hold one `spawn` point
+and `summit` zones with a whole-number `summit` property. The current course is generated from
+`games/climber/src/course/course-layout.ts` with `pnpm --filter @teckin/climber generate:course`;
+a unit test checks the map file matches the layout and that a bot can climb it.
 
 ## Commands
 

@@ -16,16 +16,24 @@ import { bindPauseToGame, bootPhaserGame } from '@teckin/engine-core/phaser';
 import type { ClientGameModule, ClientGameMountOptions } from '@teckin/game-contracts';
 import { climberThemeRequirements, defaultClimberThemeId, resolveClimberThemeId } from '../theme';
 import { defaultClimberTunables } from '../tunables';
-import { SandboxScene, type PlayerSnapshot, type ThemeSnapshot } from './sandbox-scene';
+import { bundledCourseMap, createClimberCourse } from '../course/course';
+import {
+  CourseScene,
+  type CourseHudState,
+  type PlayerSnapshot,
+  type ThemeSnapshot,
+} from './course-scene';
+import { attachCourseHud } from './hud';
 import { attachPauseButton } from './pause-button';
 
 /** Lifecycle status written to the mount element's `data-game-status`. */
-export type ClimberGameStatus = 'loading' | 'running' | 'paused';
+export type ClimberGameStatus = 'loading' | 'running' | 'paused' | 'complete';
 
 /** Read-only hooks exposed on `window.__teckinGame` with `?debug=1`, for tests and tuning. */
 export interface ClimberDebugHooks {
   player: () => PlayerSnapshot;
   theme: () => ThemeSnapshot;
+  course: () => CourseHudState;
   heldActions: () => string[];
   status: () => ClimberGameStatus;
   fps: () => number;
@@ -50,7 +58,8 @@ async function mount(
   const window = document.defaultView;
   if (!window) throw new Error('The Climber game needs a browser window');
   const debug = options.flags.debug === '1';
-  const physics = defaultClimberTunables.physics;
+  const tunables = defaultClimberTunables;
+  const course = createClimberCourse(bundledCourseMap, tunables);
 
   const setStatus = (status: ClimberGameStatus): void => {
     parent.dataset.gameStatus = status;
@@ -74,22 +83,57 @@ async function mount(
   cleanups.push(holdScreenWakeLock(document));
   cleanups.push(attachKeyboardSource(window, actions, platformerKeyBindings));
 
-  const scene = new SandboxScene({
+  let complete = false;
+  const runningStatus = (): ClimberGameStatus =>
+    complete ? 'complete' : pauseController.isPaused ? 'paused' : 'running';
+
+  const hud = attachCourseHud(
+    parent,
+    {
+      accent: colour('accent'),
+      text: colour('text'),
+      textMuted: colour('text-muted'),
+      panel: colour('panel'),
+      fontFamily,
+      summitNames: theme.manifest.names.summitNames,
+    },
+    {
+      onRespawn: () => scene.respawnAtCheckpoint(),
+      onPlayAgain: () => {
+        complete = false;
+        hud.hideComplete();
+        actions.releaseAll();
+        scene.restartCourse();
+        setStatus(runningStatus());
+      },
+    },
+  );
+  cleanups.push(hud.remove);
+
+  const scene = new CourseScene({
     actions,
-    physics,
+    tunables,
+    course,
     theme,
     playerFrame: 'player-amber',
+    checkpointsEnabled: options.flags.checkpoints === '1',
+    autopilot: debug && options.flags.autopilot === '1',
     onReady: () => {
       ready = true;
-      setStatus(pauseController.isPaused ? 'paused' : 'running');
+      setStatus(runningStatus());
+    },
+    onFrame: (state) => hud.update(state),
+    onComplete: (elapsedSeconds) => {
+      complete = true;
+      actions.releaseAll();
+      hud.showComplete(elapsedSeconds);
+      setStatus(runningStatus());
     },
   });
   const booted = bootPhaserGame({
     parent,
     scenes: [scene],
     backgroundColor: colour('background'),
-    gravityY: physics.gravity,
-    debugPhysics: debug,
   });
   cleanups.push(booted.destroy);
 
@@ -114,10 +158,10 @@ async function mount(
 
   cleanups.push(bindPauseToGame(booted.game, pauseController));
   cleanups.push(
-    pauseController.onChange((paused) => {
+    pauseController.onChange(() => {
       // A finger lifted while paused never reaches the button, so start clean on resume.
       actions.releaseAll();
-      if (ready) setStatus(paused ? 'paused' : 'running');
+      if (ready) setStatus(runningStatus());
     }),
   );
   cleanups.push(pauseWhenHidden(document, pauseController));
@@ -126,6 +170,7 @@ async function mount(
     const hooks: ClimberDebugHooks = {
       player: () => scene.snapshot(),
       theme: () => scene.themeSnapshot(),
+      course: () => scene.hudState(),
       heldActions: () => actions.heldActions(),
       status: () => (parent.dataset.gameStatus as ClimberGameStatus | undefined) ?? 'loading',
       fps: () => Math.round(booted.game.loop.actualFps),
@@ -144,6 +189,7 @@ async function mount(
           `ground ${player.onGround ? 'yes' : 'no'} jumps ${player.jumpsUsed}`,
           `input ${hooks.heldActions().join(' ') || '-'}`,
           `res ${booted.renderResolution}x art ${hooks.theme().textureScale}x ${hooks.theme().id}`,
+          `summits ${hooks.course().summitsReached} time ${hooks.course().elapsedSeconds.toFixed(1)}`,
         ];
       }),
     );

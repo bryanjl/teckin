@@ -7,13 +7,15 @@
   "exports": {
     ".": "./src/index.ts",
     "./client": "./src/client/index.ts",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./maps/course.json": "./maps/course.json"
   },
   "scripts": {
     "build": "tsx scripts/build-art.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "generate:course": "tsx scripts/generate-course.ts"
   },
   "dependencies": {
     "@teckin/engine-core": "workspace:*",
