@@ -1,3 +1,4 @@
+import { personalOrganisationName } from '@teckin/db';
 import { expect, test } from '@playwright/test';
 import {
   databaseAvailable,
@@ -31,8 +32,10 @@ test.describe('host sign-in', () => {
     const link = await readMagicLink(email);
     await page.goto(link);
     await expect(page).toHaveURL(/\/dashboard$/);
-    const localPart = email.split('@')[0];
-    await expect(page.getByTestId('organisation-name')).toHaveText(`${localPart}'s organisation`);
+    // "<local part>'s organisation", or "...s' organisation" when the random part ends in s.
+    await expect(page.getByTestId('organisation-name')).toHaveText(
+      personalOrganisationName({ email, name: null }),
+    );
     await expect(page.getByTestId('signed-in-email')).toHaveText(email);
     await expect(page.getByTestId('no-question-sets')).toBeVisible();
 

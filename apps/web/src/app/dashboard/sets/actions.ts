@@ -35,7 +35,10 @@ export async function createQuestionSet(content: unknown): Promise<SaveQuestionS
     createdById: host.userId,
     questions: checked.set.questions,
   });
-  revalidatePath('/dashboard');
+  // No revalidatePath here: it makes the client refresh the current route, and the editor has
+  // just moved the address to /dashboard/sets/<id>, so the refresh would remount the editor as
+  // a different page and lose its "saved" state. The dashboard is dynamic and is fetched fresh
+  // when the host goes back to it.
   return { ok: true, questionSetId: created.id, updatedAt: created.updatedAt.toISOString() };
 }
 
