@@ -60,6 +60,17 @@ describe('QuestionDeck', () => {
     expect(new Set(ids)).toEqual(new Set(['q1', 'q2']));
   });
 
+  it('alternates in a two-question set rather than repeating while a retry waits', () => {
+    const deck = new QuestionDeck(testSet(2).questions, { random: createSeededRandom(9) });
+    const first = deck.draw();
+    deck.recordResult(first.id, false);
+    const next = drawIds(deck, 4);
+    for (let index = 1; index < next.length; index += 1) {
+      expect(next[index]).not.toBe(next[index - 1]);
+    }
+    expect(next[1]).toBe(first.id);
+  });
+
   it('works with a single question', () => {
     const deck = new QuestionDeck(testSet(1).questions);
     expect(drawIds(deck, 3, new Set(['q1']))).toEqual(['q1', 'q1', 'q1']);

@@ -21,8 +21,8 @@ describe('climber settings', () => {
   it('keeps the tunables chosen by the Phase 2 playtests (docs/playtests.md)', () => {
     expect(defaultClimberTunables).toMatchObject({
       startingEnergy: 50,
-      jumpCost: 20,
-      doubleJumpCost: 26,
+      jumpCost: 24,
+      doubleJumpCost: 30,
       walkingCostPerTile: 2,
     });
   });

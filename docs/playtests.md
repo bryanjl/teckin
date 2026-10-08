@@ -30,22 +30,23 @@ the outcome.
 
 ## Results at default settings (2026-10-08)
 
-Energy per correct answer 100, starting energy 50, jump 20, double jump 26, walking 2 per tile.
+Energy per correct answer 100, starting energy 50, jump 24, double jump 30, walking 2 per tile
+(walking is charged only for steps taken on a ledge; drifting while falling is free).
 
 | Profile | Set | Finished | Total (min) | Climbing (min) | Answering (min) | Questions | Accuracy | Sheet visits | Jumps + double jumps | Knock-downs | Crumbles |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| skilled | maths | 6/6 | 8.8 | 2.6 | 6.3 | 43 | 89% | 13 | 98 + 41 | 0.0 | 9.8 |
-| skilled | spelling | 6/6 | 8.8 | 2.6 | 6.3 | 43 | 89% | 13 | 98 + 41 | 0.0 | 9.8 |
-| skilled | general-knowledge | 6/6 | 8.8 | 2.6 | 6.3 | 43 | 89% | 13 | 98 + 41 | 0.0 | 9.8 |
-| average | maths | 6/6 | 17.8 | 4.3 | 13.5 | 72 | 77% | 27 | 143 + 58 | 6.2 | 13.7 |
-| average | spelling | 6/6 | 17.8 | 4.3 | 13.5 | 72 | 77% | 27 | 143 + 58 | 6.2 | 13.7 |
-| average | general-knowledge | 6/6 | 17.8 | 4.3 | 13.5 | 72 | 77% | 27 | 143 + 58 | 6.2 | 13.7 |
-| struggling | maths | 3/6 | 39.8 | 6.4 | 33.4 | 130 | 56% | 36 | 205 + 66 | 8.7 | 23.2 |
-| struggling | spelling | 3/6 | 39.8 | 6.4 | 33.4 | 130 | 56% | 36 | 205 + 66 | 8.7 | 23.2 |
-| struggling | general-knowledge | 3/6 | 39.8 | 6.4 | 33.4 | 130 | 56% | 36 | 205 + 66 | 8.7 | 23.2 |
+| skilled | maths | 6/6 | 9.5 | 2.7 | 6.8 | 47 | 90% | 14 | 105 + 43 | 0.0 | 11.3 |
+| skilled | spelling | 6/6 | 9.5 | 2.7 | 6.8 | 47 | 90% | 14 | 105 + 43 | 0.0 | 11.3 |
+| skilled | general-knowledge | 6/6 | 9.5 | 2.7 | 6.8 | 47 | 90% | 14 | 105 + 43 | 0.0 | 11.3 |
+| average | maths | 6/6 | 18.1 | 4.4 | 13.7 | 73 | 77% | 28 | 149 + 52 | 6.0 | 16.5 |
+| average | spelling | 6/6 | 18.1 | 4.4 | 13.7 | 73 | 77% | 28 | 149 + 52 | 6.0 | 16.5 |
+| average | general-knowledge | 6/6 | 18.1 | 4.4 | 13.7 | 73 | 77% | 28 | 149 + 52 | 6.0 | 16.5 |
+| struggling | maths | 2/6 | 43.3 | 6.9 | 36.4 | 141 | 56% | 39 | 208 + 78 | 15.2 | 18.2 |
+| struggling | spelling | 2/6 | 43.3 | 6.9 | 36.4 | 141 | 56% | 39 | 208 + 78 | 15.2 | 18.2 |
+| struggling | general-knowledge | 2/6 | 43.3 | 6.9 | 36.4 | 141 | 56% | 39 | 208 + 78 | 15.2 | 18.2 |
 
-Averages: skilled 8.8 min, average 17.8 min, struggling 39.8 min (half of the struggling runs
-did not finish within 45 minutes).
+Averages: skilled 9.5 min, average 18.1 min, struggling 43.3 min (only two of six struggling
+runs finished within 45 minutes).
 
 ## What changed and why
 
@@ -54,10 +55,12 @@ profiles took 5.9 min (skilled), 9.9 min (average) and 22.6 min (struggling). A 
 player finished in well under the 8-minute floor and answered only about 20 questions in a
 whole game, which is too few for a question-powered game.
 
-Raising the movement costs to jump 20, double jump 26 and walking 2 per tile brings the
-skilled player to about 9 minutes and roughly 43 questions. Energy per correct answer stays
+Raising the movement costs to jump 24, double jump 30 and walking 2 per tile brings the
+skilled player to about 9.5 minutes and roughly 47 questions, comfortably inside the 8 to 12
+minute target. Energy per correct answer stays
 at the spec's 100, because it is the host's setting and the number a teacher sees. The "Get
-energy" pulse stays below 20, which is now exactly when a jump is no longer possible.
+energy" pulse stays below 20 as the spec says; a jump now needs 24, so players see the pulse a
+little after their last jump becomes impossible. Worth checking on a phone.
 
 Things to watch in real playtests:
 

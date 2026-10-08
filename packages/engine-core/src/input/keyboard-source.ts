@@ -29,7 +29,7 @@ export function attachKeyboardSource<Action extends string>(
   const onKeyDown = (rawEvent: Event): void => {
     const event = rawEvent as KeyboardEvent;
     const action = bindings[event.code];
-    if (!action) return;
+    if (!action || isTypingOrDialogTarget(event.target)) return;
     // Stops space and the arrows from scrolling the page while playing.
     event.preventDefault();
     heldCodes.add(event.code);
@@ -62,6 +62,16 @@ export function attachKeyboardSource<Action extends string>(
     target.removeEventListener('blur', onBlur);
     releaseHeld();
   };
+}
+
+/**
+ * Keys pressed in a form control or an open dialog (the question sheet, results, pause
+ * panel) belong to it: Space must press the focused answer button, arrows must move a slider.
+ */
+function isTypingOrDialogTarget(target: EventTarget | null): boolean {
+  const element = target as { closest?: (selector: string) => unknown } | null;
+  if (!element || typeof element.closest !== 'function') return false;
+  return element.closest('input, textarea, select, [role="dialog"]') !== null;
 }
 
 function keySourceId(code: string): string {

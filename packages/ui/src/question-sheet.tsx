@@ -26,6 +26,7 @@ export interface QuestionSheetProps {
 
 type Phase =
   | { kind: 'loading' }
+  | { kind: 'error'; retry: () => void }
   | { kind: 'answering'; question: PresentedQuestion }
   | { kind: 'feedback'; question: PresentedQuestion; outcome: AnswerOutcome };
 
@@ -54,21 +55,31 @@ export function QuestionSheet({
   // Blocks a second tap while an answer is being graded (state updates lag a tap).
   const busy = useRef(false);
 
-  const loadQuestion = useCallback(async () => {
-    const question = await session.currentQuestion();
-    if (!mounted.current) return;
-    busy.current = false;
-    setPhase({ kind: 'answering', question });
+  const loadQuestion = useCallback(async (): Promise<void> => {
+    try {
+      const question = await session.currentQuestion();
+      if (!mounted.current) return;
+      busy.current = false;
+      setPhase({ kind: 'answering', question });
+    } catch {
+      // A network session can fail; offer a retry instead of a sheet stuck on "Loading…".
+      if (!mounted.current) return;
+      busy.current = false;
+      setPhase({ kind: 'error', retry: () => void loadQuestion() });
+    }
   }, [session]);
 
   useEffect(() => {
     mounted.current = true;
+    // Give focus back to whatever opened the sheet (the "Get energy" button) on close.
+    const opener = document.activeElement as HTMLElement | null;
     void loadQuestion();
     const stop = session.onEnergyChange((change) => setEnergy(change.energy));
     return () => {
       mounted.current = false;
       clearTimeout(timer.current);
       stop();
+      opener?.focus?.({ preventScroll: true });
     };
   }, [session, loadQuestion]);
 
@@ -87,7 +98,15 @@ export function QuestionSheet({
   const answer = async (question: PresentedQuestion, optionId: string): Promise<void> => {
     if (phase.kind !== 'answering' || busy.current) return;
     busy.current = true;
-    const outcome = await session.submitAnswer(question.id, optionId);
+    let outcome: AnswerOutcome;
+    try {
+      outcome = await session.submitAnswer(question.id, optionId);
+    } catch {
+      if (!mounted.current) return;
+      busy.current = false;
+      setPhase({ kind: 'error', retry: () => void loadQuestion() });
+      return;
+    }
     if (!mounted.current) return;
     setPhase({ kind: 'feedback', question, outcome });
     sound?.play(outcome.isCorrect ? 'correct' : 'wrong');
@@ -98,7 +117,8 @@ export function QuestionSheet({
     );
   };
 
-  const question = phase.kind === 'loading' ? undefined : phase.question;
+  const question =
+    phase.kind === 'answering' || phase.kind === 'feedback' ? phase.question : undefined;
   const outcome = phase.kind === 'feedback' ? phase.outcome : undefined;
 
   const optionStyle = (optionId: string): CSSProperties => {
@@ -225,7 +245,6 @@ export function QuestionSheet({
                   data-testid="answer-option"
                   data-option-id={option.id}
                   disabled={phase.kind !== 'answering'}
-                  aria-pressed={outcome?.chosenOptionId === option.id}
                   onClick={() => void answer(question, option.id)}
                   style={optionStyle(option.id)}
                 >
@@ -234,6 +253,28 @@ export function QuestionSheet({
               ))}
             </div>
           </>
+        ) : phase.kind === 'error' ? (
+          <div style={{ margin: 'auto', textAlign: 'center' }}>
+            <p role="alert" style={{ font: `600 20px ${appearance.fontFamily}` }}>
+              Something went wrong getting a question.
+            </p>
+            <button
+              type="button"
+              data-testid="retry-question"
+              onClick={phase.retry}
+              style={{
+                minHeight: 56,
+                padding: '0 24px',
+                borderRadius: 16,
+                border: 'none',
+                background: appearance.accent,
+                color: appearance.panel,
+                font: `700 18px ${appearance.fontFamily}`,
+              }}
+            >
+              Try again
+            </button>
+          </div>
         ) : (
           <p style={{ margin: 'auto', font: `600 20px ${appearance.fontFamily}` }}>Loading…</p>
         )}

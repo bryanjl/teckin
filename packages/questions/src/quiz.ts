@@ -44,10 +44,13 @@ export class QuestionQuiz {
 
   /**
    * The question waiting for an answer. Calling it again before answering returns the same
-   * question, so closing and reopening the sheet cannot be used to skip one.
+   * question, so closing and reopening the sheet cannot be used to skip one. Each call
+   * restarts the answer timer, so time with the sheet closed is not counted.
    */
   currentQuestion(): PresentedQuestion {
-    if (!this.current) {
+    if (this.current) {
+      this.current.shownAt = this.now();
+    } else {
       const question = this.deck.draw();
       const order =
         this.shuffleOptions && question.type === 'multipleChoice'

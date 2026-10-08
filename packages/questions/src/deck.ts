@@ -63,9 +63,14 @@ export class QuestionDeck {
   private takeDueRetry(): string | undefined {
     const dueIndex = this.retries.findIndex((retry) => retry.othersToWait <= 0);
     if (dueIndex >= 0) return this.removeRetryAt(dueIndex);
-    // Nothing else could be shown: bring the retry back early rather than repeat a cycle.
-    const others = this.questions.length - this.retries.length;
-    if (this.retries.length > 0 && others <= 0) return this.removeRetryAt(0);
+    // Nothing else could be shown (or only the question just shown): bring the retry back
+    // early rather than repeat a question.
+    if (this.retries.length === 0) return undefined;
+    const waiting = new Set(this.retries.map((retry) => retry.questionId));
+    const others = this.questions.filter(
+      (question) => !waiting.has(question.id) && question.id !== this.lastDrawnId,
+    );
+    if (others.length === 0) return this.removeRetryAt(0);
     return undefined;
   }
 

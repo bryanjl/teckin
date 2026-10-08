@@ -59,8 +59,8 @@ export interface ClimberPhysicsTunables extends PlatformerTuning {
 /** Starting values from the spec's tunables table, plus first-guess physics. */
 export const defaultClimberTunables: Readonly<ClimberTunables> = Object.freeze({
   startingEnergy: 50,
-  jumpCost: 20,
-  doubleJumpCost: 26,
+  jumpCost: 24,
+  doubleJumpCost: 30,
   walkingCostPerTile: 2,
   crawlSpeedScale: 0.35,
   lowEnergyThreshold: 20,

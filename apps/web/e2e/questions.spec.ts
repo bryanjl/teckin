@@ -98,13 +98,18 @@ test('the game cannot move while the sheet is open and resumes exactly where it 
     player: window.__teckinGame?.player(),
     time: window.__teckinGame?.course().elapsedSeconds,
   }));
-  expect(during).toEqual(frozen);
+  expect(during.player).toEqual(frozen.player);
+  // The game clock keeps running while answering: a wrong answer costs time.
+  expect(during.time ?? 0).toBeGreaterThan((frozen.time ?? 0) + 0.3);
 
-  await page.getByTestId('close-sheet').tap();
+  // Close the sheet and read the player in the same task, before any frame can run.
+  const resumed = await page.evaluate(() => {
+    document.querySelector<HTMLButtonElement>('[data-testid="close-sheet"]')?.click();
+    return window.__teckinGame?.player();
+  });
+  expect(resumed).toEqual(frozen.player);
   await expect(page.getByTestId('question-sheet')).toBeHidden();
-  const resumed = await page.evaluate(() => window.__teckinGame?.player());
-  expect(Math.abs((resumed?.x ?? 0) - (frozen.player?.x ?? 0))).toBeLessThan(12);
-  expect(Math.abs((resumed?.y ?? 0) - (frozen.player?.y ?? 0))).toBeLessThan(40);
+  await expect(page.getByTestId('game-root')).toHaveAttribute('data-game-status', 'running');
   // Keys pressed while the sheet was open never reach the game.
   expect(await page.evaluate(() => window.__teckinGame?.heldActions())).toEqual([]);
 });

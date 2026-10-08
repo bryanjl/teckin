@@ -52,6 +52,7 @@ describe('QuestionSheet', () => {
       muted: false,
       setMuted: () => {},
       onMutedChange: () => () => {},
+      unlock: () => {},
     };
     await act(async () => {
       root.render(

@@ -44,12 +44,21 @@ export function SoloGame() {
       startingEnergy: defaultClimberTunables.startingEnergy,
       energyPerCorrectAnswer: defaultClimberSettings.energyPerCorrectAnswer,
     });
+    const sound = createSynthSoundPlayer({
+      storage: safeLocalStorage(),
+      createContext: () => new AudioContext(),
+    });
+    // The first tap or key press unlocks audio (iPhones need a user gesture to start it).
+    const unlockAudio = (): void => {
+      sound.unlock();
+      window.removeEventListener('pointerdown', unlockAudio, true);
+      window.removeEventListener('keydown', unlockAudio, true);
+    };
+    window.addEventListener('pointerdown', unlockAudio, true);
+    window.addEventListener('keydown', unlockAudio, true);
     const gameShell: ClientGameShell = {
       session,
-      sound: createSynthSoundPlayer({
-        storage: safeLocalStorage(),
-        createContext: () => new AudioContext(),
-      }),
+      sound,
       openQuestionSheet: (request) =>
         new Promise<void>((resolve) => {
           setSheet({
@@ -89,6 +98,8 @@ export function SoloGame() {
 
     return () => {
       cancelled = true;
+      window.removeEventListener('pointerdown', unlockAudio, true);
+      window.removeEventListener('keydown', unlockAudio, true);
       unmount?.();
       setSheet(undefined);
       setResults(undefined);

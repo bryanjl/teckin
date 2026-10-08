@@ -53,6 +53,8 @@ export interface CrumblingLedgeSpec {
   row: number;
   fromColumn: number;
   toColumn: number;
+  /** How the tiles collide while intact (default one-way). */
+  collision?: 'oneWay' | 'solid';
 }
 
 /** Every hazard on a course plus their shared timings. */
@@ -211,7 +213,8 @@ export class HazardField {
   reset(): void {
     this.time = 0;
     for (const entry of this.crumbling) {
-      if (entry.state === 'gone') this.setLedgeCells(entry.ledge, 'oneWay');
+      if (entry.state === 'gone')
+        this.setLedgeCells(entry.ledge, entry.ledge.collision ?? 'oneWay');
       entry.state = 'intact';
       entry.secondsLeft = 0;
     }
@@ -370,12 +373,12 @@ export class HazardField {
         }
         entry.state = 'intact';
         entry.secondsLeft = 0;
-        this.setLedgeCells(ledge, 'oneWay');
+        this.setLedgeCells(ledge, ledge.collision ?? 'oneWay');
       }
     }
   }
 
-  private setLedgeCells(ledge: CrumblingLedgeSpec, collision: 'oneWay' | 'empty'): void {
+  private setLedgeCells(ledge: CrumblingLedgeSpec, collision: 'oneWay' | 'solid' | 'empty'): void {
     for (let column = ledge.fromColumn; column <= ledge.toColumn; column += 1) {
       this.grid.set(column, ledge.row, collision);
     }

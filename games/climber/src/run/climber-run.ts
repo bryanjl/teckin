@@ -114,10 +114,12 @@ export class ClimberRun {
       }
       if (event === 'land') this.jumpsUsed = 0;
     }
-    // Only the player's own movement costs energy, not being carried or blown along.
+    // Only the player's own steps on a ledge cost energy: not being carried or blown along,
+    // and not drifting sideways while falling (falling never costs energy).
+    const walked = this.previousBody.onGround && this.body.onGround;
     this.chargeWalking(
       limits.crawling,
-      Math.abs(this.body.x - this.previousBody.x - result.pushedX),
+      walked ? Math.abs(this.body.x - this.previousBody.x - result.pushedX) : 0,
     );
 
     const update = this.progress.update(
@@ -131,6 +133,15 @@ export class ClimberRun {
       ...(update.reachedGoal !== undefined ? { reachedSummit: update.reachedGoal } : {}),
       finished,
     };
+  }
+
+  /**
+   * Counts time spent answering questions. The game clock keeps running while the sheet is
+   * open (a wrong answer costs time, not energy), but the player and their hazards stay
+   * frozen so the climb resumes exactly where it was.
+   */
+  addAnsweringTime(seconds: number): void {
+    if (!this.completed && seconds > 0) this.elapsedSeconds += seconds;
   }
 
   /** Back to the start with summits and the clock reset (energy is the session's job). */

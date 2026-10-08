@@ -84,6 +84,9 @@ export function createSynthSoundPlayer(options: SynthSoundOptions): GameSoundPla
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+    unlock() {
+      audio();
+    },
     play(name) {
       if (muted) return;
       const ctx = audio();

@@ -11,6 +11,11 @@ export interface GameSoundPlayer {
   setMuted(muted: boolean): void;
   /** Calls `listener` when muting changes. Returns an unsubscribe function. */
   onMutedChange(listener: (muted: boolean) => void): () => void;
+  /**
+   * Prepares audio. Call from a tap or key press: iPhones only start audio in response to
+   * one, and the first game sound (a jump) happens in the frame loop, not in the tap.
+   */
+  unlock(): void;
 }
 
 /** Colours and font the shared UI uses, taken from the game's theme pack. */

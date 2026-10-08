@@ -20,6 +20,16 @@ describe('QuestionQuiz', () => {
     expect(quiz.submitAnswer(question.id, 'a').millisecondsTaken).toBe(2_500);
   });
 
+  it('restarts the timer when the question is shown again after closing the sheet', () => {
+    let clock = 0;
+    const quiz = new QuestionQuiz(testSet(3), { now: () => clock });
+    const question = quiz.currentQuestion();
+    clock += 300_000;
+    quiz.currentQuestion();
+    clock += 4_000;
+    expect(quiz.submitAnswer(question.id, 'a').millisecondsTaken).toBe(4_000);
+  });
+
   it('refuses an answer for a question that is not being asked', () => {
     const quiz = new QuestionQuiz(testSet(3));
     expect(() => quiz.submitAnswer('q1', 'a')).toThrow(/not the one being asked/);

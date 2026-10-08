@@ -27,7 +27,8 @@ Each run takes the first unchecked milestone, finishes it, and ticks it. See `CL
   - Done 2026-10-08. `games/climber/themes/cogspire`: robot (8 variants), wind-up key and glow that follow energy, brass ledges, iron floor, moving/crumbling ledges, steam vent, spark barrier, six summit backdrops, lamp checkpoint, cog summit marker, UI icons. Default theme everywhere (`NEXT_PUBLIC_CLIMBER_THEME`, deploy workflow). Atlases now capped at 2048 px.
 - [x] **M2.5 Summits 3–6.** Maps and hazards (moving platforms, crumbling ledges, vents, timed barriers).
   - Done 2026-10-08. `HazardField` in `platformer-kit` (moving ledges that carry riders, vents, spark barriers, crumbling ledges on a per-player grid copy, all clocked by the course time); summits 3–6 in `course-layout.ts` (Pendulum Hall: movers; Chime Loft: crumbling + vents; Clock Face: barriers + double jumps; The Bell: everything); `HazardArt` draws them; the bot rides movers and waits for barriers. Perfect-play bot climb: about 115 s of climbing. E2E: every profile climbs past summit 2; iPhone portrait runs the whole course to the results screen.
-- [ ] **M2.6 Balance and wrap-up.** Tuning panel, scripted bot playtests recorded in `docs/playtests.md`, all Phase 2 acceptance tests, `docs/demos/phase-2.md`, self-review and fixes.
+- [x] **M2.6 Balance and wrap-up.** Tuning panel, scripted bot playtests recorded in `docs/playtests.md`, all Phase 2 acceptance tests, `docs/demos/phase-2.md`, self-review and fixes.
+  - Done 2026-10-08. `?tune=1` panel; `pnpm --filter @teckin/climber playtest` (skilled/average/struggling profiles with hesitation and fumbled jumps); costs raised to jump 24, double jump 30, walk 2 (skilled ≈ 9.5 min, unit-tested 8–12). Review fixes: answering time now on the clock, no walking cost while falling, exact freeze E2E, sheet error retry, keyboard in dialogs, iOS audio unlock, answer timer restarts on reshow, small-set deck order, focus return. Next run starts with M3.1: the Colyseus app and `room-core` (verify the current Colyseus API first). Carry into Phase 3: per-player hazard clocks (see "Known to be weak" in `docs/demos/phase-2.md`) and the `GameSession` contract for `NetworkSession`.
 
 ## Phase 3: Multiplayer
 
@@ -54,6 +55,9 @@ Manual checks the build cannot do (real phones, real-world performance). Runs ad
 - M1.4: climb both summits on a real phone; check that the jump feels fair (coyote time and jump buffer at 100 ms, short hop when jump is tapped), that falling feels readable, and try `?checkpoints=1`: fall well below summit 1 after reaching it and use "Back to checkpoint".
 - M1.5: on an iPhone SE-size phone held sideways, check whether the touch buttons hide the player near the walls (the demo notes flag landscape as tight).
 - M1.5: when ready to deploy, follow `infra/README.md` (resource group, OIDC identity, GitHub environment variables), then run "Deploy web" by hand.
+- Phase 2: play a full solo game on your phone with `?set=maths`, answer some wrong on purpose, and check the missed questions on the results screen. Judge the balance (an average player needs about 18 minutes; try `?tune=1`), whether "Get energy" at the top left is easy enough to reach, and whether the Cogspire robot reads clearly at phone size.
+- Phase 2: check sound on an iPhone (it unlocks on the first tap) and that the mute choice survives a reload.
+- Phase 2: review the sample questions (`packages/questions/sample-sets/*.json`) before showing them to a class.
 - M1.3: on a real phone, check the placeholder art looks sharp (debug overlay shows `art 2x` on most phones) and there are no visible seams between platform tiles.
 
 ## Needs Bryan
@@ -75,3 +79,4 @@ One line per run: date (UTC), milestone, outcome.
 - 2026-10-08 — M2.3 Question sheet and results UI — done.
 - 2026-10-08 — M2.4 Cogspire theme — done.
 - 2026-10-08 — M2.5 Summits 3–6 — done.
+- 2026-10-08 — M2.6 Balance and wrap-up — done (Phase 2 complete).

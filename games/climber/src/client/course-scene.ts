@@ -97,6 +97,7 @@ export class CourseScene extends Phaser.Scene {
   private energyGlowArt?: Phaser.GameObjects.Image;
   private keyAngle = 0;
   private hazardArt?: HazardArt;
+  private reducedMotion = false;
   private run!: ClimberRun;
   private stepper!: FixedStepper;
   private bot?: CourseBot;
@@ -255,10 +256,10 @@ export class CourseScene extends Phaser.Scene {
     this.stepper = new FixedStepper(tunables.physics.fixedStep);
     this.run = new ClimberRun(course, tunables, this.options.energy, checkpointsEnabled);
     if (this.options.autopilot) this.bot = createClimberBot(this.run);
-    const reducedMotion =
+    this.reducedMotion =
       typeof window !== 'undefined' &&
       window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
-    this.hazardArt = new HazardArt(this, textures, this.run, reducedMotion);
+    this.hazardArt = new HazardArt(this, textures, this.run, this.reducedMotion);
     if (textures.hasFrame(climberOptionalFrames.energyGlow)) {
       this.energyGlowArt = textures
         .image(this, 0, 0, climberOptionalFrames.energyGlow)
@@ -297,6 +298,9 @@ export class CourseScene extends Phaser.Scene {
     if (!run.completed && !this.frozen) {
       const alpha = this.stepper.advance(deltaMs / 1000, () => this.step());
       this.syncPlayerArt(alpha);
+    } else if (this.frozen) {
+      // Phaser does not update a paused scene, so hidden-tab time is never counted here.
+      run.addAnsweringTime(Math.min(deltaMs / 1000, 0.25));
     }
     this.animateEnergy(deltaMs / 1000);
     this.hazardArt?.update();
@@ -388,7 +392,7 @@ export class CourseScene extends Phaser.Scene {
     const x = this.playerArt.x;
     const y = this.playerArt.y;
     if (this.energyKeyArt) {
-      if (!this.frozen) this.keyAngle += seconds * (0.4 + level * 6);
+      if (!this.frozen && !this.reducedMotion) this.keyAngle += seconds * (0.4 + level * 6);
       // Squashing the key horizontally reads as it turning on the robot's back.
       const base = this.energyKeyArt.scaleY;
       this.energyKeyArt

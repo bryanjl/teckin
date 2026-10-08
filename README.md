@@ -44,8 +44,9 @@ Open `/play/solo`. Controls:
   Hold a direction with one thumb and tap jump with the other. Tap jump again in mid-air to
   double jump.
 - **Keyboard:** arrow keys or WASD to move; space, up arrow or W to jump.
-- Climb to the top of summit 2. The top of the screen shows your height in metres and the
-  summit you are climbing; reaching the last summit shows your time and "Play again".
+- Climb all six summits. Moving costs energy: tap the energy meter (top left, "Get energy")
+  to answer questions; each correct answer adds energy. The top of the screen shows your
+  height and the summit you are climbing; the last summit shows your results and "Play again".
 - The pause button is top-right. The game also pauses by itself when you switch apps or lock
   the phone, and carries on when you come back.
 
@@ -58,6 +59,8 @@ URL flags:
 | `?debug=1&autopilot=1` | A bot climbs the course (used by the automated tests)                                            |
 | `?touch=1`             | Shows the touch buttons on a laptop too (they appear by themselves on touch screens)             |
 | `?theme=<id>`          | Loads another theme pack (a folder name in `games/climber/themes`)                               |
+| `?set=<id>`            | Question set: `maths` (default), `spelling` or `general-knowledge`                               |
+| `?tune=1`              | Live balance sliders: energy per answer, jump costs, walking cost, gravity                       |
 
 ## Art and theme packs
 
@@ -76,6 +79,11 @@ All art is SVG. A theme pack is a folder in `games/climber/themes/<id>/`:
 To rebuild art alone: `pnpm --filter @teckin/climber build`. The default theme is set with
 `NEXT_PUBLIC_CLIMBER_THEME` (see `apps/web/.env.example`). A theme missing anything the game
 needs fails the unit tests, and at runtime falls back to the default theme.
+
+## Balance playtests
+
+`pnpm --filter @teckin/climber playtest` plays the whole course headlessly for several player
+profiles and prints the table recorded in `docs/playtests.md`.
 
 ## Levels
 

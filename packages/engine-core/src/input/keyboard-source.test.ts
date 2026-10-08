@@ -64,4 +64,33 @@ describe('attachKeyboardSource', () => {
     target.dispatchEvent(key('keydown', 'Space'));
     expect(state.isDown('jump')).toBe(false);
   });
+
+  it('leaves keys alone inside dialogs and form controls', () => {
+    const state = createPlatformerActionState();
+    attachKeyboardSource(window, state, platformerKeyBindings);
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    const button = document.createElement('button');
+    dialog.append(button);
+    const slider = document.createElement('input');
+    document.body.append(dialog, slider);
+    const inDialog = new KeyboardEvent('keydown', {
+      code: 'Space',
+      cancelable: true,
+      bubbles: true,
+    });
+    button.dispatchEvent(inDialog);
+    expect(state.isDown('jump')).toBe(false);
+    expect(inDialog.defaultPrevented).toBe(false);
+    slider.dispatchEvent(
+      new KeyboardEvent('keydown', { code: 'ArrowLeft', cancelable: true, bubbles: true }),
+    );
+    expect(state.isDown('moveLeft')).toBe(false);
+    document.body.dispatchEvent(
+      new KeyboardEvent('keydown', { code: 'Space', cancelable: true, bubbles: true }),
+    );
+    expect(state.isDown('jump')).toBe(true);
+    dialog.remove();
+    slider.remove();
+  });
 });

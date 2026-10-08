@@ -80,6 +80,30 @@ describe('ClimberRun energy', () => {
     expect(run.crawling).toBe(true);
   });
 
+  it('charges nothing for drifting sideways while falling', () => {
+    const energy = new TestEnergy(100);
+    const run = new ClimberRun(course, tunables, energy, false);
+    settle(run);
+    // Start high in the air above the floor and steer right all the way down.
+    run.dropToStart();
+    run.body = { ...run.body, y: run.body.y - 6 * tunables.physics.tileSize, onGround: false };
+    run.previousBody = run.body;
+    for (let step = 0; step < 120 && !run.body.onGround; step += 1)
+      run.step({ ...idle, right: true });
+    expect(run.body.onGround).toBe(true);
+    expect(energy.log.filter((entry) => entry.reason === 'walk')).toEqual([]);
+  });
+
+  it('counts answering time on the clock without moving the player', () => {
+    const run = new ClimberRun(course, tunables, new TestEnergy(50), false);
+    settle(run);
+    const body = run.body;
+    const clock = run.elapsedSeconds;
+    run.addAnsweringTime(12);
+    expect(run.elapsedSeconds).toBeCloseTo(clock + 12);
+    expect(run.body).toBe(body);
+  });
+
   it('describes the limits for each energy level', () => {
     expect(energyLimits(0, tunables)).toMatchObject({ crawling: true, groundJumpAllowed: false });
     expect(energyLimits(tunables.jumpCost, tunables)).toMatchObject({
