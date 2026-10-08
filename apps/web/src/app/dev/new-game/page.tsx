@@ -8,8 +8,8 @@ export const metadata: Metadata = {
 
 /**
  * Temporary game creation for Phase 3: makes a game on the realtime server with the dev
- * secret (the realtime server's `DEV_GAME_SECRET`) and gives basic host controls until the
- * host live screen arrives. Phase 4 replaces it with signed-in hosts.
+ * secret (the realtime server's `DEV_GAME_SECRET`) and opens its host screen. Phase 4
+ * replaces it with signed-in hosts.
  */
 export default function NewGamePage() {
   return (

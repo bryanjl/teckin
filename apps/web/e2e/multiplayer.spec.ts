@@ -39,7 +39,8 @@ test.describe('live multiplayer game', () => {
     await host.goto('/dev/new-game');
     await host.getByTestId('dev-secret-input').fill(e2eDevGameSecret);
     await host.getByTestId('dev-create-button').click();
-    const code = (await host.getByTestId('dev-join-code').textContent())?.trim() ?? '';
+    await expect(host).toHaveURL(/\/host\//);
+    const code = ((await host.getByTestId('join-code').textContent()) ?? '').replace(/\s/g, '');
     expect(code).toMatch(/^[1-9]\d{5}$/);
 
     // A wrong code is explained, then the right one leads to the nickname step.
@@ -72,7 +73,7 @@ test.describe('live multiplayer game', () => {
     await bo.getByTestId('join-button').click();
     await expect(bo.getByTestId('lobby-count')).toHaveText('1 other player');
     await expect(ada.getByTestId('lobby-count')).toHaveText('1 other player');
-    await expect(host.getByTestId('dev-players')).toContainText('Bo');
+    await expect(host.getByTestId('host-players')).toContainText('Bo');
 
     // Reloading with debug hooks rejoins as the same player (device key) and keeps the lobby.
     for (const phone of [ada, bo]) {
@@ -82,7 +83,7 @@ test.describe('live multiplayer game', () => {
       });
     }
     await expect(bo.getByTestId('lobby-nickname')).toHaveText('Bo');
-    await expect(host.getByTestId('dev-players').locator('li')).toHaveCount(2);
+    await expect(host.getByTestId('host-player')).toHaveCount(2);
 
     // Nobody moves before the start: the climb waits for the room.
     const lobbyX = await ada.evaluate(() => window.__teckinGame!.player().x);
@@ -93,7 +94,7 @@ test.describe('live multiplayer game', () => {
     await shot(ada, 'lobby');
 
     // Start: a 3-2-1 countdown, then the climb runs, with rank and time in the HUD.
-    await host.getByTestId('dev-start-button').click();
+    await host.getByTestId('start-button').click();
     await expect(ada.getByTestId('countdown')).toBeVisible();
     await shot(bo, 'countdown');
     for (const phone of [ada, bo]) {
@@ -118,7 +119,8 @@ test.describe('live multiplayer game', () => {
     await shot(bo, 'playing');
 
     // The host ends the game: both phones show the same ranking, each highlighting itself.
-    await host.getByTestId('dev-end-button').click();
+    await host.getByTestId('end-button').click();
+    await host.getByTestId('end-confirm-button').click();
     const rankings: string[][] = [];
     for (const [phone, name] of [
       [ada, adaName],

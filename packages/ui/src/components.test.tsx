@@ -239,6 +239,28 @@ describe('ResultsScreen', () => {
     ]);
   });
 
+  it('draws a colour marker per player when given colours', async () => {
+    const rows = [
+      { playerId: 'a', rank: 1, nickname: 'Ada', scoreLabel: '10 m' },
+      { playerId: 'b', rank: 2, nickname: 'Bo', scoreLabel: '5 m' },
+    ];
+    await act(async () => {
+      root.render(
+        <Leaderboard
+          rows={rows}
+          appearance={testAppearance}
+          large
+          markerColourOf={(playerId) => (playerId === 'a' ? '#ff0000' : undefined)}
+        />,
+      );
+    });
+    const markers = [
+      ...container.querySelectorAll<HTMLElement>('[data-testid="leaderboard-marker"]'),
+    ];
+    expect(markers).toHaveLength(1);
+    expect(markers[0]!.style.background).toBe('#ff0000');
+  });
+
   it('formats times as minutes, seconds and tenths', () => {
     expect(formatResultTime(0)).toBe('0:00.0');
     expect(formatResultTime(65.49)).toBe('1:05.4');
