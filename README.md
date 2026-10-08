@@ -101,6 +101,12 @@ needs fails the unit tests, and at runtime falls back to the default theme.
 `pnpm --filter @teckin/climber playtest` plays the whole course headlessly for several player
 profiles and prints the table recorded in `docs/playtests.md`.
 
+## Realtime load test
+
+`pnpm --filter realtime load-test` starts a realtime process, fills one room with 60 bot
+climbers and then ten rooms with 30, and prints room tick time, CPU, memory and download per
+player. Results and how to read them are in `docs/load-test.md`.
+
 ## Levels
 
 Levels are [Tiled](https://www.mapeditor.org/) maps saved as JSON (`games/climber/maps/course.json`).
@@ -156,9 +162,13 @@ Shared packages never import from a game. Games import from shared packages.
 
 ## Deploying
 
-Nothing deploys automatically. `infra/` holds the Azure Bicep templates and
-`.github/workflows/deploy-web.yml` deploys the web app when started by hand from the Actions
-tab. See [`infra/README.md`](infra/README.md) for the one-time Azure setup.
+Nothing deploys automatically. `infra/` holds the Azure Bicep templates;
+`.github/workflows/deploy-realtime.yml` (realtime server, Redis, Key Vault) and
+`.github/workflows/deploy-web.yml` (web app) deploy when started by hand from the Actions tab,
+realtime first. See [`infra/README.md`](infra/README.md) for the one-time Azure setup.
+
+The realtime server's container image builds from the repository root:
+`docker build -f apps/realtime/Dockerfile -t teckin-realtime .`
 
 To try the production package locally:
 

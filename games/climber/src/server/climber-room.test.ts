@@ -161,8 +161,17 @@ describe('ClimberRoom', () => {
       const serverEnergy = (await bot.room.request(sessionRequestTypes.energy)) as EnergyState;
       expect(serverEnergy.energy).toBe(bot.session.energy);
     }
-    const results = recorder.events(room.roomId).filter((event) => event.type === 'result');
+    const events = recorder.events(room.roomId);
+    const results = events.filter((event) => event.type === 'result');
     expect(results.map((event) => event.type === 'result' && event.rank)).toEqual([1, 2, 3]);
+    // The recorder also saw every answer and every summit along the way.
+    const answersOf = (playerId: string) =>
+      events.filter((event) => event.type === 'answer' && event.playerId === playerId).length;
+    expect(answersOf(ava!.playerId)).toBe(winner.answered);
+    const winnerSummits = events.filter(
+      (event) => event.type === 'progress' && event.playerId === ava!.playerId,
+    );
+    expect(winnerSummits).toHaveLength(course.summits.length);
     expect(ben!.run.heightMetres).toBeGreaterThan(cy!.run.heightMetres);
   }, 120_000);
 
