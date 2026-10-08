@@ -32,7 +32,8 @@ Each run takes the first unchecked milestone, finishes it, and ticks it. See `CL
 
 ## Phase 3: Multiplayer
 
-- [ ] **M3.1 Realtime server and room-core.** Colyseus app, base room with join codes (Redis), lobby, lifecycle, timer, late join, reconnect, kick/rename/lock, room cap, `SessionRecorder` (in-memory). `docker-compose.yml` for Redis and Postgres.
+- [x] **M3.1 Realtime server and room-core.** Colyseus app, base room with join codes (Redis), lobby, lifecycle, timer, late join, reconnect, kick/rename/lock, room cap, `SessionRecorder` (in-memory). `docker-compose.yml` for Redis and Postgres.
+  - Done 2026-10-08. `@teckin/room-core`: framework-free `LiveGame` (lifecycle, roster, cap, lock, late join, kicks, renames, timer), join codes on Colyseus presence (Redis with `REDIS_URL`), `InMemorySessionRecorder`, and `BaseGameRoom` (Colyseus 0.18) with host commands, 180 s reconnect seats plus device-key resume, `room:whoAmI`; shared protocol in `game-contracts/room-protocol.ts`. `apps/realtime` serves `/health`, rate-limited `/join-codes/:code` and `POST /dev/games` (behind `DEV_GAME_SECRET`), and registers `BaseGameRoom` as `climber` for now. `docker-compose.yml` for Redis and Postgres; CI runs a Redis service for the cross-process join-code test. Next run starts with M3.2: a `ClimberRoom extends BaseGameRoom` in `games/climber/src/server` (state via `RoomStateBase.extend`, server-side `QuestionQuiz` and energy, movement validation against `HazardField` and the course timeline), register it in `apps/realtime/src/server.ts` in place of `BaseGameRoom`, then `NetworkSession` in `@teckin/session` (use `room.request` for answers). Test helpers: `bootTestServer` from `@teckin/room-core/testing`. The 60-second reconnect acceptance test belongs to M3.2 (energy and height must survive).
 - [ ] **M3.2 Climber room.** Server-authoritative questions and energy, movement validation, summit and win logic, `NetworkSession` on the client.
 - [ ] **M3.3 Join flow and player view.** `/join`, nickname filter and generator, other players rendered with interpolation (nearest 15), rank readout, `/dev/new-game`.
 - [ ] **M3.4 Host live screen.** Code, QR, lobby list, tower view, live leaderboard, timer controls, end-of-game results.
@@ -58,6 +59,7 @@ Manual checks the build cannot do (real phones, real-world performance). Runs ad
 - Phase 2: play a full solo game on your phone with `?set=maths`, answer some wrong on purpose, and check the missed questions on the results screen. Judge the balance (an average player needs about 18 minutes; try `?tune=1`), whether "Get energy" at the top left is easy enough to reach, and whether the Cogspire robot reads clearly at phone size.
 - Phase 2: check sound on an iPhone (it unlocks on the first tap) and that the mute choice survives a reload.
 - Phase 2: review the sample questions (`packages/questions/sample-sets/*.json`) before showing them to a class.
+- M3.1: if you have Docker, run `docker compose up -d` and start the realtime server with `REDIS_URL=redis://localhost:6379` to confirm it connects (the build environment tested against a local `redis-server`, not the compose file).
 - M1.3: on a real phone, check the placeholder art looks sharp (debug overlay shows `art 2x` on most phones) and there are no visible seams between platform tiles.
 
 ## Needs Bryan
@@ -80,3 +82,4 @@ One line per run: date (UTC), milestone, outcome.
 - 2026-10-08 — M2.4 Cogspire theme — done.
 - 2026-10-08 — M2.5 Summits 3–6 — done.
 - 2026-10-08 — M2.6 Balance and wrap-up — done (Phase 2 complete).
+- 2026-10-08 — M3.1 Realtime server and room-core — done (Colyseus 0.18 server, room-core lifecycle/roster/join codes/reconnect/kicks, dev game creation route, docker-compose, Redis-backed test in CI).

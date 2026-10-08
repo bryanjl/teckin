@@ -102,6 +102,8 @@ export interface HostCommandRejectedMessage {
 export const roomCloseCodes = {
   kicked: 4001,
   gameDisposed: 4002,
+  /** The same device joined again on a newer connection (another tab or a reload). */
+  replaced: 4003,
 } as const;
 
 /** Why a join was refused; sent as the join error's message so clients can explain it. */

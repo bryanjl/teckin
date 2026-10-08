@@ -239,12 +239,12 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
       return;
     }
     const player = this.liveGame.player(playerId);
-    if (
-      !player ||
-      player.removedAtMs !== undefined ||
-      this.sessionIdByPlayerId.get(playerId) !== client.sessionId
-    ) {
+    if (!player || player.removedAtMs !== undefined) {
       client.leave(roomCloseCodes.kicked);
+      return;
+    }
+    if (this.sessionIdByPlayerId.get(playerId) !== client.sessionId) {
+      client.leave(roomCloseCodes.replaced);
       return;
     }
     this.setPlayerConnected(playerId, true);
@@ -321,7 +321,7 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
     this.setPlayerConnected(player.id, true);
     if (previousSessionId !== undefined && previousSessionId !== client.sessionId) {
       // An older connection of the same device (for example a stale tab) gives way.
-      this.clients.getById(previousSessionId)?.leave(roomCloseCodes.kicked);
+      this.clients.getById(previousSessionId)?.leave(roomCloseCodes.replaced);
     }
   }
 

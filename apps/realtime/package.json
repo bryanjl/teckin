@@ -2,11 +2,11 @@
   "name": "realtime",
   "version": "0.0.0",
   "private": true,
-  "description": "Realtime game server. Becomes the Colyseus server in Phase 3; for now it only serves a health endpoint.",
+  "description": "Colyseus realtime server: registers each game room and serves health, join-code lookup and dev game creation.",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/main.ts",
-    "start": "tsx src/main.ts",
+    "dev": "tsx watch --env-file-if-exists=.env src/main.ts",
+    "start": "tsx --env-file-if-exists=.env src/main.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

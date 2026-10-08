@@ -21,6 +21,22 @@ pnpm dev            # web app on http://localhost:3000
 
 `pnpm dev:all` also starts the realtime server (port 2567, health check at `/health`).
 
+### Realtime server and local services (Phase 3)
+
+The realtime server (`apps/realtime`, Colyseus) runs on its own with in-memory presence, so
+nothing else is needed for one machine. To try it the way production runs, with Redis:
+
+```sh
+docker compose up -d                     # Redis on 6379, Postgres on 5432 (Postgres is for Phase 4)
+cp apps/realtime/.env.example apps/realtime/.env
+# then set REDIS_URL=redis://localhost:6379 and a DEV_GAME_SECRET of your own in that file
+pnpm --filter realtime dev
+```
+
+Without Docker, any local Redis works (`redis-server`), or leave `REDIS_URL` empty.
+Routes: `GET /health`, `GET /join-codes/<6 digits>` (rate-limited) and `POST /dev/games`
+(needs the `x-dev-game-secret` header; returns the session id, join code and host key).
+
 ## Playing on a phone over your local network
 
 The dev server listens on every network interface (`0.0.0.0`), so phones on the same Wi-Fi can open it.

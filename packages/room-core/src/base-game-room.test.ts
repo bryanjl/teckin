@@ -176,6 +176,21 @@ describe('BaseGameRoom', () => {
     expect(room.state.players.get(firstWelcome.playerId)?.connected).toBe(true);
   });
 
+  it('replaces an older connection when the same device joins again (a second tab)', async () => {
+    const room = await createGame();
+    const deviceKey = randomUUID();
+    const firstTab = await colyseus.connectTo(room, playerOptions('Alice', deviceKey));
+    firstTab.reconnection.enabled = false;
+    const firstClosed = new Promise<number>((resolve) =>
+      firstTab.onLeave((code: number) => resolve(code)),
+    );
+    const secondTab = await colyseus.connectTo(room, playerOptions('Alice', deviceKey));
+    expect(await firstClosed).toBe(roomCloseCodes.replaced);
+    expect((await whoAmI(secondTab)).resumed).toBe(true);
+    await room.waitForNextPatch();
+    expect([...room.state.players.values()].map((player) => player.connected)).toEqual([true]);
+  });
+
   it('kicks a player, keeps their device out, and lets them back when the host allows it', async () => {
     const room = await createGame();
     const host = await colyseus.connectTo(room, { role: 'host', hostKey });
