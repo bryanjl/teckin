@@ -31,7 +31,7 @@ import {
 import { checkNickname } from '@teckin/nicknames';
 import { serverGameFor, serverGames } from './games';
 import { createLoadMetrics } from './load-metrics';
-import { createRateLimiter } from './rate-limiter';
+import { createPresenceRateLimiter } from './rate-limiter';
 
 /** Settings the realtime server reads from the environment. */
 export interface RealtimeServerOptions {
@@ -48,8 +48,13 @@ export interface RealtimeServerOptions {
   publicAddress?: string;
   /** Where answer, progress and result events go. In memory unless given. */
   recorder?: SessionRecorder;
-  /** Join-code lookups allowed per client address per minute. */
+  /** Join-code lookups allowed per client address per minute (all processes together). */
   joinLookupsPerMinute?: number;
+  /**
+   * Lookups allowed per code per minute, whoever asks (all processes together). High enough
+   * for a whole class joining at once and retrying.
+   */
+  lookupsPerCodePerMinute?: number;
   /**
    * Serves `GET /metrics/load` (room work per patch, CPU, memory, event-loop delay) for the
    * load test. Off by default; it only reports numbers, never players.
@@ -68,7 +73,8 @@ export interface RealtimeServer {
  * Creates the Colyseus realtime server with its HTTP routes:
  *
  * - `GET /health` for deploy probes;
- * - `GET /join-codes/:code` resolves a 6-digit code to a room id, rate-limited per address;
+ * - `GET /join-codes/:code` resolves a 6-digit code to a room id, rate-limited per address and
+ *   per code across every process (Redis presence when several run);
  * - `POST /games` launches a game for the web app (a request signed with the shared secret).
  */
 export function createRealtimeServer(options: RealtimeServerOptions = {}): RealtimeServer {
@@ -82,9 +88,15 @@ export function createRealtimeServer(options: RealtimeServerOptions = {}): Realt
     workMeter: workStats,
     verifyHostPass: sharedSecret ? (pass) => verifyHostPass(sharedSecret, pass) : null,
   });
-  const allowLookup = createRateLimiter({
+  const allowLookupFromAddress = createPresenceRateLimiter(() => matchMaker.presence, {
+    scope: 'join-lookup-address',
     limit: options.joinLookupsPerMinute ?? 30,
-    windowMs: 60_000,
+    windowSeconds: 60,
+  });
+  const allowLookupOfCode = createPresenceRateLimiter(() => matchMaker.presence, {
+    scope: 'join-lookup-code',
+    limit: options.lookupsPerCodePerMinute ?? 240,
+    windowSeconds: 60,
   });
 
   const health = createEndpoint('/health', { method: 'GET' }, async () =>
@@ -92,14 +104,17 @@ export function createRealtimeServer(options: RealtimeServerOptions = {}): Realt
   );
 
   const lookupJoinCode = createEndpoint('/join-codes/:code', { method: 'GET' }, async (ctx) => {
+    const code = String(ctx.params.code);
     const address = clientAddress(ctx.request);
-    if (!allowLookup(address)) {
+    const allowed =
+      (await allowLookupFromAddress(address)) &&
+      (!joinCodePattern.test(code) || (await allowLookupOfCode(code)));
+    if (!allowed) {
       return Response.json(
         { error: 'tooManyRequests' },
         { status: 429, headers: { 'retry-after': '60' } },
       );
     }
-    const code = String(ctx.params.code);
     const roomId = joinCodePattern.test(code)
       ? await createJoinCodeRegistry(matchMaker.presence).lookup(code)
       : null;

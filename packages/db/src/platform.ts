@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { PrismaClient } from './client';
+import { RecordNotFoundError } from './organisation-data';
 
 /*
  * Platform jobs that are not one organisation's page work: the realtime server's join codes,
@@ -11,7 +12,8 @@ import type { PrismaClient } from './client';
  * Stores a live game's join code. The realtime server has just claimed the code in Redis, so
  * any older game still holding it in the database is stale (its room vanished without being
  * marked ended, for example when a process stopped): that game's code is cleared first, so
- * the unique index never refuses a live game.
+ * the unique index never refuses a live game. Throws {@link RecordNotFoundError} when the game
+ * is not this organisation's or has already ended.
  */
 export async function storeLiveJoinCode(
   database: PrismaClient,
@@ -30,7 +32,7 @@ export async function storeLiveJoinCode(
       },
       data: { joinCode: game.joinCode },
     });
-    if (updated.count === 0) throw new Error('GameSession not found or already ended');
+    if (updated.count === 0) throw new RecordNotFoundError('GameSession');
   });
 }
 

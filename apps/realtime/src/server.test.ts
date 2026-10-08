@@ -5,7 +5,8 @@ import { sampleQuestionSets } from '@teckin/questions';
 import { issueHostPass } from '@teckin/room-core/realtime-trust';
 import { bootTestServer } from '@teckin/room-core/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createRateLimiter } from './rate-limiter';
+import { LocalPresence } from '@colyseus/core';
+import { createPresenceRateLimiter } from './rate-limiter';
 import { clientAddress, createRealtimeServer } from './server';
 import { launchTestGame, launchTestGameOrThrow, testLaunchOrganisationId } from './test-launch';
 
@@ -19,7 +20,11 @@ function hostOptions(roomId: string, organisationId = testLaunchOrganisationId) 
 }
 
 describe('realtime server', () => {
-  const { gameServer } = createRealtimeServer({ sharedSecret, joinLookupsPerMinute: 5 });
+  const { gameServer } = createRealtimeServer({
+    sharedSecret,
+    joinLookupsPerMinute: 5,
+    lookupsPerCodePerMinute: 8,
+  });
   let colyseus: ColyseusTestServer;
   let baseUrl = '';
 
@@ -114,6 +119,22 @@ describe('realtime server', () => {
     });
     expect(spoofed.status).toBe(429);
   });
+
+  it('rate-limits lookups of one code however many addresses ask', async () => {
+    const lookupFrom = (address: string) =>
+      fetch(`${baseUrl}/join-codes/654321`, { headers: { 'x-forwarded-for': address } });
+    const statuses = [];
+    for (let attempt = 0; attempt < 9; attempt += 1) {
+      statuses.push((await lookupFrom(`10.1.0.${attempt}`)).status);
+    }
+    expect(statuses.slice(0, 8).every((status) => status === 404)).toBe(true);
+    expect(statuses[8]).toBe(429);
+    // Other codes are unaffected.
+    const other = await fetch(`${baseUrl}/join-codes/654320`, {
+      headers: { 'x-forwarded-for': '10.1.1.1' },
+    });
+    expect(other.status).toBe(404);
+  });
 });
 
 describe('clientAddress', () => {
@@ -130,12 +151,23 @@ describe('clientAddress', () => {
   });
 });
 
-describe('createRateLimiter', () => {
-  it('allows the limit per window, per key, then resets', () => {
+describe('createPresenceRateLimiter', () => {
+  it('allows the limit per window, per key, then resets', async () => {
     let nowMs = 0;
-    const allow = createRateLimiter({ limit: 2, windowMs: 1_000, now: () => nowMs });
-    expect([allow('a'), allow('a'), allow('a'), allow('b')]).toEqual([true, true, false, true]);
+    const presence = new LocalPresence();
+    const allow = createPresenceRateLimiter(() => presence, {
+      scope: 'test',
+      limit: 2,
+      windowSeconds: 1,
+      now: () => nowMs,
+    });
+    expect([await allow('a'), await allow('a'), await allow('a'), await allow('b')]).toEqual([
+      true,
+      true,
+      false,
+      true,
+    ]);
     nowMs = 1_000;
-    expect(allow('a')).toBe(true);
+    expect(await allow('a')).toBe(true);
   });
 });

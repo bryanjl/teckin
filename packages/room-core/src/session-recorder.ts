@@ -1,12 +1,21 @@
 import type { GameEndReason } from './live-game';
 
 /**
- * Everything a game session reports for the record. Phase 4 stores these in the database for
- * reports; Phase 3 keeps them in memory. Events carry player ids and nicknames only.
+ * Everything a game session reports for the record, as a game room sends it. `sessionId` is the
+ * room id. Events carry player ids and nicknames only (and a hash of the device key).
  */
-export type SessionRecordEvent =
-  | { type: 'sessionStarted'; sessionId: string; gameId: string; atMs: number }
-  | { type: 'playerJoined'; sessionId: string; playerId: string; nickname: string; atMs: number }
+export type SessionRecordEventBody =
+  | { type: 'sessionStarted'; sessionId: string; gameId: string; joinCode: string; atMs: number }
+  | { type: 'playStarted'; sessionId: string; atMs: number }
+  | {
+      type: 'playerJoined';
+      sessionId: string;
+      playerId: string;
+      nickname: string;
+      /** Hash of the device key the player reconnects with; never the key itself. */
+      reconnectTokenHash: string;
+      atMs: number;
+    }
   | { type: 'playerRenamed'; sessionId: string; playerId: string; nickname: string; atMs: number }
   | { type: 'playerRemoved'; sessionId: string; playerId: string; atMs: number }
   | {
@@ -37,6 +46,21 @@ export type SessionRecordEvent =
       atMs: number;
     }
   | { type: 'sessionEnded'; sessionId: string; reason: GameEndReason; atMs: number };
+
+/**
+ * Which database record and organisation a room's events belong to. Rooms launched from the web
+ * app have both; rooms made by tests and the load test have neither and are not stored.
+ */
+export interface SessionRecordContext {
+  gameSessionId?: string;
+  organisationId?: string;
+}
+
+/**
+ * One recorded event with its context. `sessionEnded` is always a session's last event: a
+ * game's `result` events come before it.
+ */
+export type SessionRecordEvent = SessionRecordEventBody & SessionRecordContext;
 
 /** Receives every answer, progress and result event of a game session. */
 export interface SessionRecorder {

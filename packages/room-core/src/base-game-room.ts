@@ -46,7 +46,7 @@ import {
 import { RosterPlayer, RoomStateBase } from './room-state';
 import type { HostPassClaims } from './realtime-trust';
 import type { RoomWorkMeter } from './room-work-meter';
-import type { SessionRecorder } from './session-recorder';
+import type { SessionRecordEventBody, SessionRecorder } from './session-recorder';
 
 /** Hashes a secret (a device key) so rooms never hold the raw value. */
 export function hashSecret(secret: string): string {
@@ -238,6 +238,7 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
       type: 'sessionStarted',
       sessionId: this.roomId,
       gameId: this.gameId,
+      joinCode: this.joinCode,
       atMs: this.now(),
     });
     await this.onGameCreated(options);
@@ -303,6 +304,7 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
       sessionId: this.roomId,
       playerId: result.player.id,
       nickname: result.player.nickname,
+      reconnectTokenHash: deviceKeyHash,
       atMs: this.now(),
     });
     await this.onPlayerAdmitted(result.player, client);
@@ -383,7 +385,6 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
     return roomServices.now();
   }
 
-  /** Sends an event to the session recorder, if one is configured. */
   /**
    * Logs a client message that failed validation (the spec: drop and log). At most one line
    * per message type every 10 seconds per room, so a broken or hostile client cannot flood
@@ -401,8 +402,12 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
     });
   }
 
-  protected record(event: Parameters<SessionRecorder['record']>[0]): void {
-    void Promise.resolve(roomServices.recorder?.record(event)).catch((error: unknown) => {
+  /** Sends an event to the session recorder (if one is configured) with this game's context. */
+  protected record(event: SessionRecordEventBody): void {
+    const recorder = roomServices.recorder;
+    if (!recorder) return;
+    const context = { gameSessionId: this.gameSessionId, organisationId: this.organisationId };
+    void Promise.resolve(recorder.record({ ...event, ...context })).catch((error: unknown) => {
       console.error('Session recorder failed', { sessionId: this.roomId, error });
     });
   }
@@ -722,6 +727,14 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
       this.state.remainingMs = this.liveGame.remainingMs(event.endedAtMs) ?? 0;
       // A finished game's code is free for others at once.
       void this.releaseJoinCode();
+    }
+    if (event.type === 'started') {
+      this.state.remainingMs = event.endsAtMs - event.startedAtMs;
+      this.record({ type: 'playStarted', sessionId: this.roomId, atMs: event.startedAtMs });
+    }
+    this.onLifecycleEvent(event);
+    if (event.type === 'ended') {
+      // After the game's own handler, so its results are recorded before the session ends.
       this.record({
         type: 'sessionEnded',
         sessionId: this.roomId,
@@ -729,9 +742,5 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
         atMs: event.endedAtMs,
       });
     }
-    if (event.type === 'started') {
-      this.state.remainingMs = event.endsAtMs - event.startedAtMs;
-    }
-    this.onLifecycleEvent(event);
   }
 }

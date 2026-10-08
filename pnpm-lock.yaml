@@ -35,6 +35,9 @@ importers:
       '@teckin/climber':
         specifier: workspace:*
         version: link:../../games/climber
+      '@teckin/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@teckin/game-contracts':
         specifier: workspace:*
         version: link:../../packages/game-contracts

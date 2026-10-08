@@ -51,8 +51,20 @@ describe('createJoinCodeRegistry', () => {
 describe('InMemorySessionRecorder', () => {
   it('keeps events per session and clears one session', () => {
     const recorder = new InMemorySessionRecorder();
-    recorder.record({ type: 'sessionStarted', sessionId: 'a', gameId: 'g', atMs: 1 });
-    recorder.record({ type: 'sessionStarted', sessionId: 'b', gameId: 'g', atMs: 2 });
+    recorder.record({
+      type: 'sessionStarted',
+      sessionId: 'a',
+      gameId: 'g',
+      joinCode: '000001',
+      atMs: 1,
+    });
+    recorder.record({
+      type: 'sessionStarted',
+      sessionId: 'b',
+      gameId: 'g',
+      joinCode: '000002',
+      atMs: 2,
+    });
     expect(recorder.events('a')).toHaveLength(1);
     recorder.clear('a');
     expect(recorder.events().map((event) => event.sessionId)).toEqual(['b']);

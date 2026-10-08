@@ -20,6 +20,7 @@
     "@colyseus/redis-presence": "0.18.5",
     "@colyseus/ws-transport": "0.18.4",
     "@teckin/climber": "workspace:*",
+    "@teckin/db": "workspace:*",
     "@teckin/game-contracts": "workspace:*",
     "@teckin/nicknames": "workspace:*",
     "@teckin/questions": "workspace:*",
