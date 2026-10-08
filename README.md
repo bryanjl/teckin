@@ -27,7 +27,7 @@ The realtime server (`apps/realtime`, Colyseus) runs on its own with in-memory p
 nothing else is needed for one machine. To try it the way production runs, with Redis:
 
 ```sh
-docker compose up -d                     # Redis on 6379, Postgres on 5432 (Postgres is for Phase 4)
+docker compose up -d                     # Redis on 6379, Postgres on 5432
 cp apps/realtime/.env.example apps/realtime/.env
 # then set REDIS_URL=redis://localhost:6379 and a DEV_GAME_SECRET of your own in that file
 pnpm --filter realtime dev
@@ -36,6 +36,30 @@ pnpm --filter realtime dev
 Without Docker, any local Redis works (`redis-server`), or leave `REDIS_URL` empty.
 Routes: `GET /health`, `GET /join-codes/<6 digits>` (rate-limited) and `POST /dev/games`
 (needs the `x-dev-game-secret` header; returns the session id, join code and host key).
+
+### Database and host sign-in (Phase 4)
+
+Hosts sign in; players never do. The web app needs Postgres for sign-in and the dashboard
+(the play pages work without it).
+
+```sh
+docker compose up -d postgres            # or any local Postgres 16+ with the same user and database
+cp packages/db/.env.example packages/db/.env
+cp apps/web/.env.example apps/web/.env.local
+# in apps/web/.env.local set AUTH_SECRET (run `npx auth secret` or `openssl rand -base64 33`)
+pnpm --filter @teckin/db db:migrate      # applies packages/db/prisma/migrations
+pnpm dev
+```
+
+Open `http://localhost:3000/sign-in`, enter any email address, and copy the sign-in link the
+web server prints in its log (no email is sent locally). Signing in the first time creates the
+account and a personal organisation. Google and Microsoft buttons appear only when their
+`AUTH_GOOGLE_*` / `AUTH_MICROSOFT_ENTRA_ID_*` variables are set; deployed sign-in emails go
+through `EMAIL_SERVER` (SMTP). After changing `packages/db/prisma/schema.prisma`, run
+`pnpm --filter @teckin/db db:migrate:dev --name <change>` to write a migration.
+
+Database tests (`pnpm test`) use `DATABASE_URL`, each in a throwaway schema; without it they are
+skipped locally (CI always runs them).
 
 ## Playing on a phone over your local network
 
