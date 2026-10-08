@@ -5,14 +5,20 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**", "public/game-assets/**"],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "dist/**",
+        "public/game-assets/**",
+        "src/generated/**"
+      ],
       "env": ["NEXT_OUTPUT", "NEXT_PUBLIC_*"]
     },
     "lint": {},
     "typecheck": {},
     "test": {
       "outputs": ["coverage/**"],
-      "env": ["REDIS_URL"]
+      "env": ["REDIS_URL", "DATABASE_URL", "TEST_DATABASE_URL", "CI"]
     },
     "dev": {
       "cache": false,

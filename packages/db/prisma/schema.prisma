@@ -1,0 +1,276 @@
+// Teckin database schema. See docs/SPEC.md "Data model".
+//
+// Tenancy: every table except the Auth.js tables (User, Account, Session, VerificationToken)
+// carries organisationId. Child rows reference their parent through (id, organisationId), so the
+// database itself refuses a row whose organisation differs from its parent's. Players are never
+// users: a Participant holds a nickname and a hashed reconnect token, nothing personal.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Auth.js tables (hosts only). Field names follow the Auth.js adapter contract.
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(uuid(7))
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts            Account[]
+  sessions            Session[]
+  memberships         Membership[]
+  questionSetsCreated QuestionSet[]
+  gamesHosted         GameSession[]
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  sessionToken String   @id
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+// ---------------------------------------------------------------------------
+// Organisations
+// ---------------------------------------------------------------------------
+
+model Organisation {
+  id        String   @id @default(uuid(7))
+  name      String
+  /// Feeds PlanLimits; billing plugs in later.
+  planKey   String   @default("free")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships        Membership[]
+  questionSets       QuestionSet[]
+  questions          Question[]
+  answerOptions      AnswerOption[]
+  gameSessions       GameSession[]
+  participants       Participant[]
+  answerEvents       AnswerEvent[]
+  participantResults ParticipantResult[]
+}
+
+enum MembershipRole {
+  owner
+  member
+}
+
+model Membership {
+  organisationId String
+  userId         String
+  role           MembershipRole @default(member)
+  createdAt      DateTime       @default(now())
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([organisationId, userId])
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Question sets
+// ---------------------------------------------------------------------------
+
+model QuestionSet {
+  id             String   @id @default(uuid(7))
+  organisationId String
+  title          String
+  description    String   @default("")
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organisation Organisation  @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  createdBy    User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  questions    Question[]
+  gameSessions GameSession[]
+
+  @@unique([id, organisationId])
+  @@index([organisationId, updatedAt])
+}
+
+enum QuestionType {
+  multipleChoice
+  trueFalse
+}
+
+model Question {
+  id             String       @id @default(uuid(7))
+  organisationId String
+  questionSetId  String
+  position       Int
+  type           QuestionType
+  prompt         String
+  imageUrl       String?
+
+  organisation  Organisation   @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  questionSet   QuestionSet    @relation(fields: [questionSetId, organisationId], references: [id, organisationId], onDelete: Cascade)
+  answerOptions AnswerOption[]
+
+  @@unique([id, organisationId])
+  @@unique([questionSetId, position])
+  @@index([organisationId])
+}
+
+model AnswerOption {
+  id             String  @id @default(uuid(7))
+  organisationId String
+  questionId     String
+  position       Int
+  text           String
+  isCorrect      Boolean
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  question     Question     @relation(fields: [questionId, organisationId], references: [id, organisationId], onDelete: Cascade)
+
+  @@unique([questionId, position])
+  @@index([organisationId])
+}
+
+// ---------------------------------------------------------------------------
+// Games
+// ---------------------------------------------------------------------------
+
+enum GameSessionStatus {
+  lobby
+  playing
+  ended
+}
+
+model GameSession {
+  id                String            @id @default(uuid(7))
+  organisationId    String
+  /// The registered GameDefinition id, e.g. "climber".
+  gameType          String
+  /// The set the game was launched from; the questions themselves live in questionSnapshot.
+  questionSetId     String?
+  /// Validated by the game's Zod settings schema.
+  settings          Json
+  /// The question set as it was at launch, so editing the set never changes past reports.
+  questionSnapshot  Json
+  /// Unique only while the game is live: cleared when the game ends (NULLs never collide).
+  joinCode          String?           @unique
+  status            GameSessionStatus @default(lobby)
+  hostUserId        String?
+  /// The realtime room holding the live game.
+  roomId            String?
+  createdAt         DateTime          @default(now())
+  startedAt         DateTime?
+  endedAt           DateTime?
+
+  organisation       Organisation        @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  questionSet        QuestionSet?        @relation(fields: [questionSetId], references: [id], onDelete: SetNull)
+  hostUser           User?               @relation(fields: [hostUserId], references: [id], onDelete: SetNull)
+  participants       Participant[]
+  answerEvents       AnswerEvent[]
+  participantResults ParticipantResult[]
+
+  @@unique([id, organisationId])
+  @@index([organisationId, createdAt])
+}
+
+/// A player in one game. No personal data: a nickname and a hashed reconnect token only.
+model Participant {
+  id                  String    @id @default(uuid(7))
+  organisationId      String
+  gameSessionId       String
+  nickname            String
+  reconnectTokenHash  String?
+  joinedAt            DateTime  @default(now())
+  removedAt           DateTime?
+
+  organisation Organisation       @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  gameSession  GameSession        @relation(fields: [gameSessionId, organisationId], references: [id, organisationId], onDelete: Cascade)
+  answerEvents AnswerEvent[]
+  result       ParticipantResult?
+
+  @@unique([id, organisationId])
+  @@index([gameSessionId])
+  @@index([organisationId])
+}
+
+model AnswerEvent {
+  id                String   @id @default(uuid(7))
+  organisationId    String
+  gameSessionId     String
+  participantId     String
+  /// The question's id inside the session's questionSnapshot (no foreign key: sets can change).
+  questionId        String
+  chosenOptionId    String
+  isCorrect         Boolean
+  millisecondsTaken Int
+  createdAt         DateTime @default(now())
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  gameSession  GameSession  @relation(fields: [gameSessionId, organisationId], references: [id, organisationId], onDelete: Cascade)
+  participant  Participant  @relation(fields: [participantId, organisationId], references: [id, organisationId], onDelete: Cascade)
+
+  @@index([gameSessionId, participantId])
+  @@index([organisationId, createdAt])
+}
+
+model ParticipantResult {
+  organisationId String
+  gameSessionId  String
+  participantId  String
+  rank           Int
+  /// Game-specific stats, e.g. the Climber's bestHeight, summitsReached, finishedAt.
+  gameStats      Json
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  gameSession  GameSession  @relation(fields: [gameSessionId, organisationId], references: [id, organisationId], onDelete: Cascade)
+  participant  Participant  @relation(fields: [participantId, organisationId], references: [id, organisationId], onDelete: Cascade)
+
+  @@id([gameSessionId, participantId])
+  @@unique([participantId, organisationId])
+  @@index([organisationId])
+}

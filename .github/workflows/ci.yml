@@ -27,6 +27,18 @@ jobs:
         image: redis:7-alpine
         ports:
           - 6379:6379
+      # Database tests each make their own schema here; migrations are checked against it too.
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: teckin
+          POSTGRES_PASSWORD: teckin-ci
+          POSTGRES_DB: teckin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U teckin" --health-interval 5s --health-timeout 3s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -35,12 +47,20 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Apply migrations and check they match the schema
+        working-directory: packages/db
+        env:
+          DATABASE_URL: postgresql://teckin:teckin-ci@localhost:5432/teckin
+        run: |
+          pnpm db:migrate
+          pnpm db:check-drift
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
         env:
           REDIS_URL: redis://localhost:6379
+          DATABASE_URL: postgresql://teckin:teckin-ci@localhost:5432/teckin
       - run: pnpm build
       - name: Install Playwright Chromium
         timeout-minutes: 8
