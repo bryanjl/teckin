@@ -208,7 +208,7 @@ test('touch controls sit inside the safe-area insets and are at least 72 px', as
 test('the theme atlas loads at a texture scale matching the screen density', async ({ page }) => {
   await openGame(page);
   const theme = await page.evaluate(() => window.__teckinGame?.theme());
-  expect(theme).toMatchObject({ id: 'placeholder', loaded: true });
+  expect(theme).toMatchObject({ id: 'cogspire', loaded: true });
   const devicePixelRatio = await page.evaluate(() => window.devicePixelRatio);
   // Render resolution is capped at 2x, and the world nearly fills a phone's width.
   expect(theme?.textureScale).toBe(devicePixelRatio >= 2 ? 2 : 1);
@@ -218,13 +218,13 @@ test('the theme atlas loads at a texture scale matching the screen density', asy
 test('an unknown theme falls back to the default theme instead of failing', async ({ page }) => {
   await openGame(page, '?debug=1&theme=does-not-exist');
   const theme = await page.evaluate(() => window.__teckinGame?.theme());
-  expect(theme).toMatchObject({ id: 'placeholder', loaded: true });
+  expect(theme).toMatchObject({ id: 'cogspire', loaded: true });
 });
 
 test('the HUD shows the height in metres and the summit being climbed', async ({ page }) => {
   await openGame(page);
   await expect(page.getByTestId('hud-height')).toHaveText('0 m');
-  await expect(page.getByTestId('hud-summit')).toHaveText('Summit 1');
+  await expect(page.getByTestId('hud-summit')).toHaveText('Boiler Room');
 });
 
 test('the course can be climbed from the start to the top of summit 2', async ({ page }) => {
@@ -237,7 +237,7 @@ test('the course can be climbed from the start to the top of summit 2', async ({
       intervals: [1_000],
     })
     .toBeGreaterThanOrEqual(1);
-  await expect(page.getByTestId('hud-summit')).toHaveText('Summit 2');
+  await expect(page.getByTestId('hud-summit')).toHaveText('Gear Gallery');
   await expect(page.getByTestId('results-screen')).toBeVisible({ timeout: 120_000 });
   await expect(page.getByTestId('game-root')).toHaveAttribute('data-game-status', 'complete');
   await expect(page.getByTestId('results-time')).toHaveText(/^Time \d+:\d\d\.\d$/);
@@ -313,7 +313,7 @@ test('swapping the theme folder changes the art and names with no code change', 
   await openGame(page);
   await waitForLanding(page);
   expect(await spritePixelShare()).toBeLessThan(0.01);
-  await expect(page.getByTestId('hud-summit')).toHaveText('Summit 1');
+  await expect(page.getByTestId('hud-summit')).toHaveText('Boiler Room');
 
   await openGame(page, `?debug=1&theme=${theme.id}`);
   await waitForLanding(page);

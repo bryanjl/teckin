@@ -6,7 +6,12 @@ import { fileURLToPath } from 'node:url';
 import { buildThemes } from '@teckin/engine-core/art';
 import { findMissingThemeAssets } from '@teckin/engine-core';
 import { describe, expect, it } from 'vitest';
-import { climberThemeRequirements, defaultClimberThemeId, resolveClimberThemeId } from './theme';
+import {
+  climberOptionalFrames,
+  climberThemeRequirements,
+  defaultClimberThemeId,
+  resolveClimberThemeId,
+} from './theme';
 
 const themesDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'themes');
 
@@ -19,6 +24,13 @@ describe('Climber theme packs', () => {
       for (const { manifest } of summaries) {
         expect(findMissingThemeAssets(manifest, climberThemeRequirements), manifest.id).toEqual([]);
       }
+      const cogspire = summaries.find((summary) => summary.manifest.id === 'cogspire')?.manifest;
+      expect(cogspire?.names.summitNames[0]).toBe('Boiler Room');
+      for (const number of [1, 2, 3, 4, 5, 6]) {
+        expect(cogspire?.frames).toHaveProperty(climberOptionalFrames.summitBackground(number));
+      }
+      expect(cogspire?.frames).toHaveProperty(climberOptionalFrames.energyKey);
+      expect(cogspire?.frames).toHaveProperty(climberOptionalFrames.energyGlow);
     } finally {
       await rm(outDir, { recursive: true, force: true });
     }

@@ -8,6 +8,7 @@ import {
 import { ThemeTextures, chooseThemeTextureScale } from '@teckin/engine-core/phaser';
 import { CourseBot, FixedStepper, footOf, type PlatformerEvent } from '@teckin/platformer-kit';
 import type { ClimberCourse } from '../course/course';
+import { climberOptionalFrames } from '../theme';
 import { ClimberRun, type EnergyAccount } from '../run/climber-run';
 import type { ClimberTunables } from '../tunables';
 
@@ -90,6 +91,9 @@ export class CourseScene extends Phaser.Scene {
   private themeTextures?: ThemeTextures;
   private playerArt!: Phaser.GameObjects.Image;
   private checkpointArt?: Phaser.GameObjects.Image;
+  private energyKeyArt?: Phaser.GameObjects.Image;
+  private energyGlowArt?: Phaser.GameObjects.Image;
+  private keyAngle = 0;
   private run!: ClimberRun;
   private stepper!: FixedStepper;
   private bot?: CourseBot;
@@ -233,7 +237,7 @@ export class CourseScene extends Phaser.Scene {
     const worldWidth = map.columns * tileSize;
     const worldHeight = map.rows * tileSize;
 
-    textures.tiled(this, 0, 0, worldWidth, worldHeight, 'background');
+    this.drawBackgrounds(textures, worldWidth, worldHeight);
     this.drawTiles(textures);
     for (const summit of course.summits) {
       textures.image(this, summit.respawnX, summit.respawnY, 'summit-marker').setOrigin(0.5, 1);
@@ -248,7 +252,17 @@ export class CourseScene extends Phaser.Scene {
     this.stepper = new FixedStepper(tunables.physics.fixedStep);
     this.run = new ClimberRun(course, tunables, this.options.energy, checkpointsEnabled);
     if (this.options.autopilot) this.bot = new CourseBot(map.grid, tunables.physics);
+    if (textures.hasFrame(climberOptionalFrames.energyGlow)) {
+      this.energyGlowArt = textures
+        .image(this, 0, 0, climberOptionalFrames.energyGlow)
+        .setOrigin(0.5, 0.5);
+    }
     this.playerArt = textures.image(this, 0, 0, this.options.playerFrame).setOrigin(0.5, 1);
+    if (textures.hasFrame(climberOptionalFrames.energyKey)) {
+      this.energyKeyArt = textures
+        .image(this, 0, 0, climberOptionalFrames.energyKey)
+        .setOrigin(0.5, 0.85);
+    }
     this.syncPlayerArt(1);
 
     const camera = this.cameras.main;
@@ -277,6 +291,7 @@ export class CourseScene extends Phaser.Scene {
       const alpha = this.stepper.advance(deltaMs / 1000, () => this.step());
       this.syncPlayerArt(alpha);
     }
+    this.animateEnergy(deltaMs / 1000);
     this.options.onFrame(this.hudState());
   }
 
@@ -324,6 +339,56 @@ export class CourseScene extends Phaser.Scene {
     apply('moveLeft', buttons.left);
     apply('moveRight', buttons.right);
     apply('jump', buttons.jump);
+  }
+
+  /**
+   * Behind each summit's stretch of the course, the theme's `background-<n>` if it has one,
+   * otherwise the shared `background`.
+   */
+  private drawBackgrounds(textures: ThemeTextures, worldWidth: number, worldHeight: number): void {
+    const { course } = this.options;
+    let bottom = worldHeight;
+    course.summits.forEach((summit, index) => {
+      const frame = climberOptionalFrames.summitBackground(summit.number);
+      const isLast = index === course.summits.length - 1;
+      // Each band reaches a few tiles above its summit ledge, and the last one to the top.
+      const top = isLast
+        ? 0
+        : Math.max(0, summit.respawnY - 3 * this.options.tunables.physics.tileSize);
+      textures.tiled(
+        this,
+        0,
+        top,
+        worldWidth,
+        bottom - top,
+        textures.hasFrame(frame) ? frame : 'background',
+      );
+      bottom = top;
+    });
+    if (bottom > 0) textures.tiled(this, 0, 0, worldWidth, bottom, 'background');
+  }
+
+  /**
+   * The wind-up key spins faster and the glow brightens as energy fills, so energy can be
+   * read from the character without reading the meter. Both slow and dim when low.
+   */
+  private animateEnergy(seconds: number): void {
+    if (!this.energyKeyArt && !this.energyGlowArt) return;
+    const { tunables, energy } = this.options;
+    const level = Math.min(1, energy.energy / tunables.energyMeterFull);
+    const facing = this.run.body.facing;
+    const x = this.playerArt.x;
+    const y = this.playerArt.y;
+    if (this.energyKeyArt) {
+      if (!this.frozen) this.keyAngle += seconds * (0.4 + level * 6);
+      // Squashing the key horizontally reads as it turning on the robot's back.
+      const base = this.energyKeyArt.scaleY;
+      this.energyKeyArt
+        .setPosition(x - facing * 11, y - 18)
+        .setScale(base * (Math.abs(Math.cos(this.keyAngle)) * 0.8 + 0.2), base)
+        .setAlpha(0.6 + level * 0.4);
+    }
+    this.energyGlowArt?.setPosition(x, y - 15).setAlpha(level * 0.9);
   }
 
   /** Draws map tiles, merging runs of the same frame on a row into one repeating sprite. */

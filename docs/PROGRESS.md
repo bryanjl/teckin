@@ -23,7 +23,8 @@ Each run takes the first unchecked milestone, finishes it, and ticks it. See `CL
   - Done 2026-10-08. `GameSession` and `ClientGameShell` in `game-contracts`; `LocalSession` in the new `@teckin/session` package; `ClimberRun` (pure run with energy) in `games/climber/src/run`; HUD energy meter doubles as the "Get energy" button and pulses below 20; `simulateClimb` plays a whole game headlessly. Lint forbids the climber importing `@teckin/questions` or `@teckin/session` outside tests.
 - [x] **M2.3 Question sheet and results UI.** Shared bottom sheet, feedback animations, results screen with missed questions, reduced motion, sound with mute.
   - Done 2026-10-08. `QuestionSheet` and `ResultsScreen` (React, `@teckin/ui`) rendered by the play page through the shell; synthesised sounds with a remembered mute toggle (`createSynthSoundPlayer` in `engine-core`); `?set=` picks the sample set; the autopilot answers through the real sheet.
-- [ ] **M2.4 Cogspire theme.** Full SVG theme pack (robot with colour variants, tiles, hazards, backgrounds per summit), made the default.
+- [x] **M2.4 Cogspire theme.** Full SVG theme pack (robot with colour variants, tiles, hazards, backgrounds per summit), made the default.
+  - Done 2026-10-08. `games/climber/themes/cogspire`: robot (8 variants), wind-up key and glow that follow energy, brass ledges, iron floor, moving/crumbling ledges, steam vent, spark barrier, six summit backdrops, lamp checkpoint, cog summit marker, UI icons. Default theme everywhere (`NEXT_PUBLIC_CLIMBER_THEME`, deploy workflow). Atlases now capped at 2048 px.
 - [ ] **M2.5 Summits 3–6.** Maps and hazards (moving platforms, crumbling ledges, vents, timed barriers).
 - [ ] **M2.6 Balance and wrap-up.** Tuning panel, scripted bot playtests recorded in `docs/playtests.md`, all Phase 2 acceptance tests, `docs/demos/phase-2.md`, self-review and fixes.
 
@@ -71,3 +72,4 @@ One line per run: date (UTC), milestone, outcome.
 - 2026-10-08 — M2.1 Questions package — done.
 - 2026-10-08 — M2.2 Session and energy — done.
 - 2026-10-08 — M2.3 Question sheet and results UI — done.
+- 2026-10-08 — M2.4 Cogspire theme — done.

@@ -1,0 +1,40 @@
+{
+  "id": "cogspire",
+  "displayName": "Cogspire",
+  "names": {
+    "gameTitle": "Cogspire",
+    "energyWord": "Energy",
+    "summitNames": [
+      "Boiler Room",
+      "Gear Gallery",
+      "Pendulum Hall",
+      "Chime Loft",
+      "Clock Face",
+      "The Bell"
+    ]
+  },
+  "tokens": {
+    "colours": {
+      "background": "#14182a",
+      "accent": "#ffd166",
+      "text": "#fff8e7",
+      "text-muted": "#d9c9a3",
+      "panel": "#14213d",
+      "correct": "#5bd68a",
+      "wrong": "#ff7b7b"
+    },
+    "fontFamily": "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+  },
+  "spriteVariants": {
+    "player": [
+      { "id": "amber", "replace": {} },
+      { "id": "red", "replace": { "#d4a24c": "#d9534f", "#f2cf7a": "#f5a3a0" } },
+      { "id": "green", "replace": { "#d4a24c": "#4caf6e", "#f2cf7a": "#a3e3b8" } },
+      { "id": "blue", "replace": { "#d4a24c": "#4a8fd9", "#f2cf7a": "#a8cdf5" } },
+      { "id": "purple", "replace": { "#d4a24c": "#9a6ad9", "#f2cf7a": "#d2b8f5" } },
+      { "id": "pink", "replace": { "#d4a24c": "#e06aa8", "#f2cf7a": "#f6bcd9" } },
+      { "id": "teal", "replace": { "#d4a24c": "#3fb3a8", "#f2cf7a": "#a3e6df" } },
+      { "id": "white", "replace": { "#d4a24c": "#d8dde8", "#f2cf7a": "#ffffff" } }
+    ]
+  }
+}

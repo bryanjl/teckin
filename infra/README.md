@@ -41,7 +41,7 @@ browser ──HTTPS──▶ Front Door endpoint
    - `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`
    - `AZURE_RESOURCE_GROUP`
    - `AZURE_DEPLOY_PRINCIPAL_ID`: the object id of the service principal from step 2
-   - `CLIMBER_THEME` (optional): theme pack id, default `placeholder`
+   - `CLIMBER_THEME` (optional): theme pack id, default `cogspire`
 4. Run **Actions → Deploy web → Run workflow** and pick the environment. The last step prints
    the Front Door URL once `/api/health` answers.
 

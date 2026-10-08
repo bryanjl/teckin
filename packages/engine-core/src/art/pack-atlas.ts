@@ -25,7 +25,7 @@ export interface PackOptions {
    * pixels so linear filtering never samples a neighbouring frame (no seams between tiles).
    */
   padding: number;
-  /** Largest atlas edge allowed. 4096 is safe on every WebGL device the spec targets. */
+  /** Largest atlas edge allowed. 2048 keeps atlases loadable on older phones' GPUs. */
   maxSize?: number;
 }
 
@@ -35,7 +35,7 @@ export interface PackOptions {
  * ties. Deterministic for the same input, so rebuilt atlases do not churn.
  */
 export function packAtlas(inputs: readonly PackInput[], options: PackOptions): PackedAtlas {
-  const maxSize = options.maxSize ?? 4096;
+  const maxSize = options.maxSize ?? 2048;
   const padding = options.padding;
   const names = new Set<string>();
   for (const input of inputs) {

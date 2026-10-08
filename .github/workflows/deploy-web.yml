@@ -69,7 +69,7 @@ jobs:
       - run: pnpm build
         env:
           NEXT_OUTPUT: standalone
-          NEXT_PUBLIC_CLIMBER_THEME: ${{ vars.CLIMBER_THEME || 'placeholder' }}
+          NEXT_PUBLIC_CLIMBER_THEME: ${{ vars.CLIMBER_THEME || 'cogspire' }}
       - run: pnpm --filter web assemble:deploy
 
       - uses: azure/login@v2

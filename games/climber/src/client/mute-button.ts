@@ -9,7 +9,7 @@ export interface MuteButtonTheme {
 }
 
 /**
- * Sound on/off toggle next to the pause button. The choice is remembered by the platform's
+ * Sound on/off toggle under the pause button. The choice is remembered by the platform's
  * sound player. Returns a function that removes the button.
  */
 export function attachMuteButton(
@@ -22,8 +22,9 @@ export function attachMuteButton(
   button.dataset.testid = 'mute-button';
   Object.assign(button.style, {
     position: 'absolute',
-    top: 'calc(env(safe-area-inset-top, 0px) + 12px)',
-    right: 'calc(env(safe-area-inset-right, 0px) + 76px)',
+    // Under the pause button: the top row is full on a 375 px phone.
+    top: 'calc(env(safe-area-inset-top, 0px) + 76px)',
+    right: 'calc(env(safe-area-inset-right, 0px) + 12px)',
     width: '56px',
     height: '56px',
     padding: '14px',
