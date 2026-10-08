@@ -5,7 +5,8 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**", "public/game-assets/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**", "public/game-assets/**"],
+      "env": ["NEXT_OUTPUT", "NEXT_PUBLIC_*"]
     },
     "lint": {},
     "typecheck": {},

@@ -1,0 +1,110 @@
+# Deploys the web app to Azure: Bicep for the infrastructure, then the Next.js standalone
+# package to App Service and the game assets to Blob Storage. Manual trigger only; nothing
+# runs on push. Before the first run, follow infra/README.md to create the resource group,
+# the federated deploy identity and the repository variables used below.
+name: Deploy web
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: dev
+        type: choice
+        options: [dev, prod]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-web-${{ inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+  TURBO_TELEMETRY_DISABLED: '1'
+
+jobs:
+  deploy:
+    name: Deploy web (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # A GitHub environment per target lets Bryan add required reviewers before prod deploys.
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Check configuration
+        env:
+          CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+        run: |
+          for name in CLIENT_ID TENANT_ID SUBSCRIPTION_ID RESOURCE_GROUP; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Repository variable AZURE_${name} is not set for this environment. See infra/README.md."
+              exit 1
+            fi
+          done
+
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # Hoisted node_modules so the standalone server has plain folders, not pnpm symlinks.
+      - run: pnpm install --frozen-lockfile --config.node-linker=hoisted
+      - run: pnpm build
+        env:
+          NEXT_OUTPUT: standalone
+          NEXT_PUBLIC_CLIMBER_THEME: ${{ vars.CLIMBER_THEME || 'placeholder' }}
+      - run: pnpm --filter web assemble:deploy
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy infrastructure
+        id: infra
+        run: |
+          outputs=$(az deployment group create \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "web-${{ github.run_id }}" \
+            --template-file infra/web/main.bicep \
+            --parameters "infra/web/main.${{ inputs.environment }}.bicepparam" \
+            --parameters deployPrincipalId="${{ vars.AZURE_DEPLOY_PRINCIPAL_ID }}" \
+            --query properties.outputs --output json)
+          echo "web_app=$(echo "$outputs" | jq -r .webAppName.value)" >> "$GITHUB_OUTPUT"
+          echo "storage=$(echo "$outputs" | jq -r .assetsStorageAccountName.value)" >> "$GITHUB_OUTPUT"
+          echo "site_url=$(echo "$outputs" | jq -r .siteUrl.value)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload game assets
+        run: |
+          az storage blob upload-batch \
+            --account-name "${{ steps.infra.outputs.storage }}" \
+            --auth-mode login \
+            --destination game-assets \
+            --source apps/web/public/game-assets \
+            --overwrite \
+            --content-cache-control "public, max-age=86400"
+
+      - name: Deploy web app
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ steps.infra.outputs.web_app }}
+          package: apps/web/.deploy
+
+      - name: Check health through Front Door
+        run: |
+          url="${{ steps.infra.outputs.site_url }}/api/health"
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent "$url"; then echo; echo "Healthy: $url"; exit 0; fi
+            sleep 15
+          done
+          echo "::error::$url did not report healthy within 5 minutes"
+          exit 1

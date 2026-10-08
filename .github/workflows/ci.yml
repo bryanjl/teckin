@@ -45,3 +45,15 @@ jobs:
           name: playwright-report
           path: apps/web/playwright-report
           retention-days: 7
+
+  infra:
+    name: Validate Bicep
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      # Compiles and lints the templates offline; nothing signs in to Azure.
+      - run: az bicep install
+      - run: |
+          for template in infra/*/main.bicep; do az bicep build --file "$template" --stdout > /dev/null; done
+          for params in infra/*/*.bicepparam; do az bicep build-params --file "$params" --stdout > /dev/null; done

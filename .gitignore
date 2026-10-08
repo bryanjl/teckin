@@ -16,3 +16,4 @@ test-results/
 *.tsbuildinfo
 next-env.d.ts
 apps/web/public/game-assets/
+apps/web/.deploy/

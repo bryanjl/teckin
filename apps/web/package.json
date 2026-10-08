@@ -10,6 +10,7 @@
     "prebuild": "node scripts/copy-game-assets.mjs",
     "build": "next build",
     "start": "next start --hostname 0.0.0.0 --port 3000",
+    "assemble:deploy": "node scripts/assemble-standalone.mjs",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
