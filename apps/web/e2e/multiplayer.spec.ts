@@ -6,15 +6,18 @@ import {
   type BrowserContext,
   type Page,
 } from '@playwright/test';
-import { e2eDevGameSecret } from './support/live-game';
+import { createPlayableSet, launchClimberGame } from './support/live-game';
+import { databaseAvailable, e2eSignInOrigin, signUpHost } from './support/sign-in';
 
 /**
- * A whole local game across devices: a host creates it on `/dev/new-game`, two phones join
+ * A whole local game across devices: a signed-in host launches it from "New game", two phones join
  * on `/join` (one with a random name), see the lobby and countdown, see each other climb,
  * and both get the same final ranking when the host ends the game. It drives several
  * browsers at once, so it runs in one project only.
  */
 test.describe('live multiplayer game', () => {
+  test.use({ baseURL: e2eSignInOrigin });
+  test.skip(!databaseAvailable, 'Needs DATABASE_URL (a migrated Postgres) for the web server.');
   test.skip(() => test.info().project.name !== 'iphone-portrait', 'Drives several devices itself');
   test.setTimeout(120_000);
 
@@ -50,10 +53,9 @@ test.describe('live multiplayer game', () => {
   }) => {
     // The host makes a game.
     await host.setViewportSize({ width: 1280, height: 800 });
-    await host.goto('/dev/new-game');
-    await host.getByTestId('dev-secret-input').fill(e2eDevGameSecret);
-    await host.getByTestId('dev-create-button').click();
-    await expect(host).toHaveURL(/\/host\//);
+    await signUpHost(host, 'multiplayer');
+    await createPlayableSet(host, 'Even numbers');
+    await launchClimberGame(host, { setTitle: 'Even numbers' });
     const code = ((await host.getByTestId('join-code').textContent()) ?? '').replace(/\s/g, '');
     expect(code).toMatch(/^[1-9]\d{5}$/);
 

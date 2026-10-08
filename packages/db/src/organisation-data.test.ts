@@ -101,6 +101,7 @@ describeWithDatabase('organisation-scoped data access', (getDatabase) => {
           questions: sampleQuestions('stolen'),
         }),
       () => alphaData.questionSets.duplicate(beta.set.id, { title: 'Copied out' }),
+      () => alphaData.gameSessions.attachRoom(beta.game.id, 'stolen-room'),
       () => alphaData.gameSessions.markStarted(beta.game.id),
       () => alphaData.gameSessions.markEnded(beta.game.id),
       () => alphaData.gameSessions.delete(beta.game.id),
@@ -115,7 +116,7 @@ describeWithDatabase('organisation-scoped data access', (getDatabase) => {
     expect(betaSet?.title).toBe('beta set');
     expect(betaSet?.questions[0]?.prompt).toBe('beta question 1');
     const betaGame = await beta.data.gameSessions.get(beta.game.id);
-    expect(betaGame).toMatchObject({ status: 'lobby', joinCode: 'beta-code' });
+    expect(betaGame).toMatchObject({ status: 'lobby', joinCode: 'beta-code', roomId: null });
     expect((await beta.data.participants.listForGame(beta.game.id)).map((p) => p.nickname)).toEqual(
       ['beta One', 'beta Two'],
     );
@@ -186,6 +187,20 @@ describeWithDatabase('organisation-scoped data access', (getDatabase) => {
     ]);
     const edited = await alphaData.questionSets.get(fresh.id);
     expect(edited?.questions.map((question) => question.position)).toEqual([0, 1, 2]);
+  });
+
+  it('records the realtime room a launched game got', async () => {
+    const game = await alphaData.gameSessions.create({
+      gameType: 'climber',
+      questionSetId: alpha.set.id,
+      settings: {},
+      hostUserId: alpha.user.id,
+    });
+    await alphaData.gameSessions.attachRoom(game.id, 'room-abc');
+    expect((await alphaData.gameSessions.get(game.id))?.roomId).toBe('room-abc');
+    expect((await alphaData.gameSessions.list()).find((row) => row.id === game.id)?.roomId).toBe(
+      'room-abc',
+    );
   });
 
   it('frees a join code when its game ends', async () => {

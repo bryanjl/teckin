@@ -74,8 +74,9 @@ phone ──HTTPS──▶ teckin-<env>-rt-1  (entry: join-code lookup, seat res
    Redis and Container Apps environment, builds and pushes the server image, then deploys
    the realtime processes and checks each `/health`. The last step prints the realtime
    entry URL: save it as the environment variable `REALTIME_URL`.
-   - Optional, dev only: a GitHub environment **secret** `DEV_GAME_SECRET` (any long random
-     string) turns on `/dev/new-game` until Phase 4 brings host sign-in. Prod never gets it.
+   - First, a GitHub environment **secret** `REALTIME_SHARED_SECRET` (at least 32 random
+     characters, e.g. `openssl rand -base64 33`; a different value per environment). The web
+     app needs the same value; without it no game can be launched.
 5. Run **Actions → Deploy web → Run workflow** and pick the environment. The last step prints
    the Front Door URL once `/api/health` answers.
 

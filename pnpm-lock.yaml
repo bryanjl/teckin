@@ -105,6 +105,9 @@ importers:
       '@teckin/questions':
         specifier: workspace:*
         version: link:../../packages/questions
+      '@teckin/room-core':
+        specifier: workspace:*
+        version: link:../../packages/room-core
       '@teckin/session':
         specifier: workspace:*
         version: link:../../packages/session
@@ -129,6 +132,9 @@ importers:
       uqr:
         specifier: 0.1.3
         version: 0.1.3
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
     devDependencies:
       '@playwright/test':
         specifier: 1.63.0
@@ -546,6 +552,9 @@ importers:
       vitest:
         specifier: 5.0.3
         version: 5.0.3(@types/node@22.20.5)(happy-dom@20.14.5)(vite@8.3.3(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
 
 packages:
 

@@ -12,5 +12,4 @@ describe('climberGame', () => {
     ]);
     expect(climberGame.settingsSchema.parse({})).toEqual(defaultClimberSettings);
   });
-
 });

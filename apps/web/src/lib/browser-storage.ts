@@ -63,8 +63,3 @@ export function writeStored(storage: Storage | null, key: string, value: string)
     // Nothing to do: the value only saves typing.
   }
 }
-
-/** Where a created game's host key is kept for this tab, for the host screen to pick up. */
-export function hostKeyStorageKey(sessionId: string): string {
-  return `teckin.hostKey.${sessionId}`;
-}

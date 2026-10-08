@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-import { e2eDevGameSecret } from './e2e/support/live-game';
+import { e2eRealtimeSharedSecret } from './e2e/support/live-game';
 import { e2eAuthSecret, e2eMailboxDirectory, e2eSignInOrigin } from './e2e/support/sign-in';
 
 const port = Number(process.env.E2E_PORT ?? 3100);
@@ -37,11 +37,14 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
       // Sign-in tests read magic links from a mailbox folder; DATABASE_URL comes from the caller.
+      // Hosts launch games on the realtime server with the shared secret.
       env: {
         AUTH_SECRET: e2eAuthSecret,
         AUTH_URL: e2eSignInOrigin,
         AUTH_LOG_MAGIC_LINKS: 'true',
         AUTH_DEV_MAILBOX_DIR: e2eMailboxDirectory,
+        REALTIME_SHARED_SECRET: e2eRealtimeSharedSecret,
+        REALTIME_INTERNAL_URL: `http://127.0.0.1:${realtimePort}`,
       },
     },
     {
@@ -52,7 +55,7 @@ export default defineConfig({
       env: {
         REALTIME_PORT: String(realtimePort),
         REALTIME_HOST: '127.0.0.1',
-        DEV_GAME_SECRET: e2eDevGameSecret,
+        REALTIME_SHARED_SECRET: e2eRealtimeSharedSecret,
         REDIS_URL: '',
       },
     },

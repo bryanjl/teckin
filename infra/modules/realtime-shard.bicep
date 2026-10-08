@@ -32,8 +32,8 @@ param identityId string
 @description('Key Vault secret URI holding the Redis connection URL.')
 param redisUrlSecretUri string
 
-@description('Key Vault secret URI of the dev game secret; empty switches dev game creation off.')
-param devGameSecretUri string = ''
+@description('Key Vault secret URI of the secret shared with the web app; empty means no game can be launched.')
+param sharedSecretUri string = ''
 
 @description('Application Insights connection string.')
 param appInsightsConnectionString string
@@ -55,12 +55,12 @@ var keyVaultSecrets = concat(
       identity: identityId
     }
   ],
-  empty(devGameSecretUri)
+  empty(sharedSecretUri)
     ? []
     : [
         {
-          name: 'dev-game-secret'
-          keyVaultUrl: devGameSecretUri
+          name: 'realtime-shared-secret'
+          keyVaultUrl: sharedSecretUri
           identity: identityId
         }
       ]
@@ -75,7 +75,9 @@ var environmentVariables = concat(
     { name: 'REDIS_URL', secretRef: 'redis-url' }
     { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
   ],
-  empty(devGameSecretUri) ? [] : [{ name: 'DEV_GAME_SECRET', secretRef: 'dev-game-secret' }]
+  empty(sharedSecretUri)
+    ? []
+    : [{ name: 'REALTIME_SHARED_SECRET', secretRef: 'realtime-shared-secret' }]
 )
 
 resource app 'Microsoft.App/containerApps@2024-03-01' = {

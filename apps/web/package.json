@@ -24,6 +24,7 @@
     "@teckin/game-contracts": "workspace:*",
     "@teckin/nicknames": "workspace:*",
     "@teckin/questions": "workspace:*",
+    "@teckin/room-core": "workspace:*",
     "@teckin/session": "workspace:*",
     "@teckin/ui": "workspace:*",
     "next": "16.4.0",
@@ -31,7 +32,8 @@
     "nodemailer": "8.0.11",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "uqr": "0.1.3"
+    "uqr": "0.1.3",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

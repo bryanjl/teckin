@@ -6,16 +6,21 @@ import {
   type BrowserContext,
   type Page,
 } from '@playwright/test';
-import { e2eDevGameSecret } from './support/live-game';
+import { createPlayableSet, launchClimberGame } from './support/live-game';
+import { databaseAvailable, e2eSignInOrigin, signInHost, signUpHost } from './support/sign-in';
 
 /**
- * The host live screen on a laptop: code, QR and join link in the lobby; players appearing
+ * The host live screen on a laptop, launched by a signed-in host from "New game": code, QR and
+ * join link in the lobby; players appearing
  * live; rename, remove (and letting removed players back) and locking; the countdown; the
  * tower view, live leaderboard, timer and added time during play; ending the game; and the
- * final ranking, the same as the phones', surviving a reload and opening on a second screen.
+ * final ranking, the same as the phones', surviving a reload and opening on a second screen
+ * signed in to the same account. Hosts from another organisation cannot open or control it.
  * It drives several browsers at once, so it runs in one project only.
  */
 test.describe('host live screen', () => {
+  test.use({ baseURL: e2eSignInOrigin });
+  test.skip(!databaseAvailable, 'Needs DATABASE_URL (a migrated Postgres) for the web server.');
   test.skip(() => test.info().project.name !== 'iphone-portrait', 'Drives several devices itself');
   test.setTimeout(150_000);
 
@@ -25,6 +30,7 @@ test.describe('host live screen', () => {
     await Promise.all(contexts.splice(0).map((context) => context.close()));
   });
 
+  /** A new device; phones use the project's address, host screens the sign-in origin. */
   async function newDevice(
     browser: Browser,
     device: 'iPhone SE' | 'Pixel 7' | 'Desktop Chrome',
@@ -32,7 +38,7 @@ test.describe('host live screen', () => {
     const { defaultBrowserType: _ignored, ...profile } = devices[device];
     const context = await browser.newContext({
       ...profile,
-      baseURL: test.info().project.use.baseURL,
+      baseURL: device === 'Desktop Chrome' ? e2eSignInOrigin : test.info().project.use.baseURL,
     });
     contexts.push(context);
     return context.newPage();
@@ -57,12 +63,24 @@ test.describe('host live screen', () => {
 
   test('runs a game from the lobby to the final ranking', async ({ browser, page: host }) => {
     await host.setViewportSize({ width: 1280, height: 800 });
-    await host.goto('/dev/new-game');
-    await host.getByTestId('dev-secret-input').fill(e2eDevGameSecret);
-    await host.getByTestId('dev-checkpoints-input').check();
-    await host.getByTestId('dev-create-button').click();
-    await expect(host).toHaveURL(/\/host\/[^/#]+$/);
-    const sessionId = new URL(host.url()).pathname.split('/').pop()!;
+    const hostEmail = await signUpHost(host, 'host-screen');
+    await createPlayableSet(host, 'Even numbers');
+    const gameSessionId = await launchClimberGame(host, {
+      setTitle: 'Even numbers',
+      checkpoints: true,
+    });
+
+    // Another organisation's host can neither open the host screen nor see the game.
+    const intruder = await newDevice(browser, 'Desktop Chrome');
+    await signUpHost(intruder, 'intruder');
+    const intruderVisit = await intruder.goto(`/host/${gameSessionId}`);
+    expect(intruderVisit?.status()).toBe(404);
+    await intruder.goto('/dashboard');
+    await expect(intruder.getByTestId('no-recent-games')).toBeVisible();
+    // Signed-out visitors are sent to sign in.
+    const visitor = await newDevice(browser, 'Desktop Chrome');
+    await visitor.goto(`/host/${gameSessionId}`);
+    await expect(visitor).toHaveURL(/\/sign-in/);
 
     // Lobby: the code in big digits, the join link and a QR code of the join link.
     await expect(host.getByTestId('host-phase')).toHaveText('Lobby');
@@ -188,27 +206,22 @@ test.describe('host live screen', () => {
     expect(await order(ada)).toEqual(hostOrder);
     await shot(host, 'host-results');
 
-    // A reload keeps the host in the game (key kept for the tab), still on the results.
-    const hostLink = await host.reload().then(async () => {
-      await expect(host.getByTestId('host-results')).toBeVisible({ timeout: 10_000 });
-      expect(await order(host)).toEqual(hostOrder);
-      return `${origin}/host/${sessionId}`;
-    });
+    // A reload keeps the host in the game (a fresh pass), still on the results.
+    await host.reload();
+    await expect(host.getByTestId('host-results')).toBeVisible({ timeout: 10_000 });
+    expect(await order(host)).toEqual(hostOrder);
 
-    // A second screen opens the host link with the key in the fragment.
+    // A second screen signed in to the same account opens the same address.
     const projector = await newDevice(browser, 'Desktop Chrome');
-    const key = await host.evaluate(
-      (id) => window.sessionStorage.getItem(`teckin.hostKey.${id}`),
-      sessionId,
-    );
-    await projector.goto(`${hostLink}#hostKey=${key}`);
+    await signInHost(projector, hostEmail);
+    await projector.goto(`/host/${gameSessionId}`);
     await expect(projector.getByTestId('host-results')).toBeVisible({ timeout: 10_000 });
     expect(await order(projector)).toEqual(hostOrder);
-    expect(new URL(projector.url()).hash).toBe('');
   });
 
-  test('explains a host screen opened without the host link', async ({ page }) => {
-    await page.goto('/host/not-a-real-game');
-    await expect(page.getByTestId('host-problem')).toContainText('needs the host link');
+  test('answers 404 for a game that does not exist', async ({ page }) => {
+    await signUpHost(page, 'no-game');
+    const response = await page.goto('/host/not-a-real-game');
+    expect(response?.status()).toBe(404);
   });
 });

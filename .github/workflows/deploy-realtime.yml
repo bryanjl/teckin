@@ -73,8 +73,8 @@ jobs:
       - name: Deploy shared resources
         id: shared
         env:
-          # Only outside prod; Phase 4 replaces /dev/new-game with signed-in hosts.
-          DEV_GAME_SECRET: ${{ inputs.environment != 'prod' && secrets.DEV_GAME_SECRET || '' }}
+          # The same value the web app gets; it checks launches and host passes.
+          REALTIME_SHARED_SECRET: ${{ secrets.REALTIME_SHARED_SECRET }}
         run: |
           outputs=$(az deployment group create \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
@@ -82,7 +82,7 @@ jobs:
             --template-file infra/realtime/main.bicep \
             --parameters "infra/realtime/main.${{ inputs.environment }}.bicepparam" \
             --parameters deployPrincipalId="${{ vars.AZURE_DEPLOY_PRINCIPAL_ID }}" \
-                         devGameSecret="$DEV_GAME_SECRET" \
+                         realtimeSharedSecret="$REALTIME_SHARED_SECRET" \
                          realtimeImageTag='' \
             --query properties.outputs --output json)
           echo "registry=$(echo "$outputs" | jq -r .registryName.value)" >> "$GITHUB_OUTPUT"
@@ -106,7 +106,7 @@ jobs:
       - name: Deploy realtime processes
         id: apps
         env:
-          DEV_GAME_SECRET: ${{ inputs.environment != 'prod' && secrets.DEV_GAME_SECRET || '' }}
+          REALTIME_SHARED_SECRET: ${{ secrets.REALTIME_SHARED_SECRET }}
         run: |
           outputs=$(az deployment group create \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
@@ -114,7 +114,7 @@ jobs:
             --template-file infra/realtime/main.bicep \
             --parameters "infra/realtime/main.${{ inputs.environment }}.bicepparam" \
             --parameters deployPrincipalId="${{ vars.AZURE_DEPLOY_PRINCIPAL_ID }}" \
-                         devGameSecret="$DEV_GAME_SECRET" \
+                         realtimeSharedSecret="$REALTIME_SHARED_SECRET" \
                          realtimeImageTag="${{ github.sha }}" \
             --query properties.outputs --output json)
           echo "hosts=$(echo "$outputs" | jq -r '.shardHostNames.value | join(" ")')" >> "$GITHUB_OUTPUT"

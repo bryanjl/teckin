@@ -367,11 +367,24 @@ export function organisationData(database: PrismaClient, organisationId: string)
             startedAt: true,
             endedAt: true,
             hostUserId: true,
+            roomId: true,
             _count: { select: { participants: true } },
           },
         }),
       get: (gameSessionId: string) =>
         database.gameSession.findFirst({ where: { id: gameSessionId, ...inOrganisation } }),
+      /**
+       * Records the realtime room a launched game got. The join code is not stored here: the
+       * realtime server keeps live codes unique, and a stored code is only freed when the
+       * session recorder marks the game ended (M4.4), so storing it now could collide.
+       */
+      attachRoom: (gameSessionId: string, roomId: string) =>
+        orNotFound('GameSession', () =>
+          database.gameSession.update({
+            where: { id: gameSessionId, ...inOrganisation },
+            data: { roomId },
+          }),
+        ),
       markStarted: (gameSessionId: string, startedAt = new Date()) =>
         orNotFound('GameSession', () =>
           database.gameSession.update({

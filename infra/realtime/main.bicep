@@ -43,9 +43,9 @@ param redisHighAvailability bool = false
 @description('Realtime image tag in this environment\'s registry. Empty deploys the shared resources only (the first run, before an image exists).')
 param realtimeImageTag string = ''
 
-@description('Secret for the temporary /dev/new-game page (Phase 3 only). Empty switches dev game creation off.')
+@description('Secret shared with the web app (REALTIME_SHARED_SECRET, at least 32 characters). It checks game launches and host passes; empty means no game can be launched.')
 @secure()
-param devGameSecret string = ''
+param realtimeSharedSecret string = ''
 
 @description('Object id of the deploy identity. When set, it may push images to the registry.')
 param deployPrincipalId string = ''
@@ -152,12 +152,12 @@ resource redisUrlSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
-resource devGameSecretValue 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (!empty(devGameSecret)) {
+resource realtimeSharedSecretValue 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (!empty(realtimeSharedSecret)) {
   parent: vault
-  name: 'dev-game-secret'
+  name: 'realtime-shared-secret'
   dependsOn: [keyVault]
   properties: {
-    value: devGameSecret
+    value: realtimeSharedSecret
     contentType: 'text/plain'
   }
 }
@@ -203,7 +203,7 @@ module shards '../modules/realtime-shard.bicep' = [
       registryServer: registry.properties.loginServer
       identityId: identity.id
       redisUrlSecretUri: redisUrlSecret.properties.secretUri
-      devGameSecretUri: empty(devGameSecret) ? '' : devGameSecretValue!.properties.secretUri
+      sharedSecretUri: empty(realtimeSharedSecret) ? '' : realtimeSharedSecretValue!.properties.secretUri
       appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
       cpu: shardCpu
       memory: shardMemory

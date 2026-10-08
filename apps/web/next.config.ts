@@ -14,6 +14,7 @@ const nextConfig: NextConfig = {
     '@teckin/game-contracts',
     '@teckin/nicknames',
     '@teckin/questions',
+    '@teckin/room-core',
     '@teckin/session',
     '@teckin/ui',
   ],

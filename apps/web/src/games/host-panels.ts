@@ -5,7 +5,8 @@ import { climberHostPanel } from './climber-host-panel';
 /**
  * What a game adds to the platform's host screen: its live view (the Climber's tower), its
  * ranking for the shared leaderboard, and player colours. The platform draws everything
- * else (code, QR, lobby, timer, controls). Phase 4's game registry will carry these.
+ * else (code, QR, lobby, timer, controls). Kept apart from the registry in `./registry`
+ * because these are client code (React components) that server pages must not touch.
  */
 export interface HostGamePanel {
   /** Name shown in the host screen's header. */
@@ -22,11 +23,12 @@ export interface HostGamePanel {
   LiveView: ComponentType<{ state: unknown }>;
 }
 
-const panels: Readonly<Record<string, HostGamePanel>> = {
+/** Each registered game's host panel, by game id (a test checks every game has one). */
+export const hostPanels: Readonly<Record<string, HostGamePanel>> = {
   climber: climberHostPanel,
 };
 
 /** The host panel for a game id, or `undefined` for a game this app does not know. */
 export function hostPanelFor(gameId: string): HostGamePanel | undefined {
-  return panels[gameId];
+  return hostPanels[gameId];
 }

@@ -10,7 +10,7 @@ import {
   type ClimberRoomStateView,
 } from '@teckin/climber';
 import { useEffect, useState } from 'react';
-import type { HostGamePanel } from './host-game-panels';
+import type { HostGamePanel } from './host-panels';
 
 /** Leaders whose names are written beside their dots; the rest show on hover. */
 const labelledLeaders = 5;

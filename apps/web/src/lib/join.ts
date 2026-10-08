@@ -76,7 +76,7 @@ export function describeJoinProblem(problem: JoinProblem): string {
     case 'nicknameInvalid':
       return 'Please choose a different nickname.';
     case 'invalidOptions':
-    case 'wrongHostKey':
+    case 'hostNotAllowed':
     case 'failed':
       return 'Something went wrong joining the game. Try again.';
   }
@@ -84,7 +84,7 @@ export function describeJoinProblem(problem: JoinProblem): string {
 
 const joinRefusals: readonly JoinRefusal[] = [
   'invalidOptions',
-  'wrongHostKey',
+  'hostNotAllowed',
   'gameEnded',
   'lateJoinClosed',
   'locked',

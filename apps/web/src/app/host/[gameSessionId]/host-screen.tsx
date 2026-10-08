@@ -13,10 +13,9 @@ import {
 import { Leaderboard } from '@teckin/ui';
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { safeStorage } from '../../../lib/browser-storage';
-import { hostScreenLink, resolveHostKey } from '../../../lib/host-key';
+import { hostPanelFor, type HostGamePanel } from '../../../games/host-panels';
 import { joinProblemFromError, realtimeUrl } from '../../../lib/join';
-import { hostPanelFor, type HostGamePanel } from './host-game-panels';
+import { requestHostPass } from './actions';
 import {
   describeEndReason,
   describeHostRejection,
@@ -124,8 +123,22 @@ function EndGameButton({ onEnd }: { onEnd: () => void }) {
   );
 }
 
-/** The live host screen of one game: everything a teacher projects and controls. */
-export function HostScreen({ sessionId }: { sessionId: string }) {
+/** Props for {@link HostScreen}. */
+export interface HostScreenProps {
+  /** The game's record; the screen asks the server for a host pass to its room. */
+  gameSessionId: string;
+  /** The game's display name from the registry. */
+  gameName: string;
+  /** False when the game never got a room (its launch failed). */
+  hasRoom: boolean;
+}
+
+/**
+ * The live host screen of one game: everything a teacher projects and controls. It joins the
+ * room with a host pass the server signs only for hosts in the game's organisation, asking for
+ * a fresh one on every (re)join.
+ */
+export function HostScreen({ gameSessionId, gameName, hasRoom }: HostScreenProps) {
   const [room, setRoom] = useState<Room | undefined>();
   const [view, setView] = useState<HostView | undefined>();
   const [, setStateVersion] = useState(0);
@@ -134,7 +147,6 @@ export function HostScreen({ sessionId }: { sessionId: string }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [origin, setOrigin] = useState('');
-  const [hostKey, setHostKey] = useState<string | null>(null);
   const endedRef = useRef(false);
 
   useEffect(() => {
@@ -146,30 +158,38 @@ export function HostScreen({ sessionId }: { sessionId: string }) {
     const join = async (): Promise<void> => {
       setOrigin(window.location.origin);
       setProblem(undefined);
-      const resolved = resolveHostKey(sessionId, window.location.hash, safeStorage('session'));
-      if (resolved.fromFragment) {
-        // Keep the key out of the address bar (and screenshots of it) once it is stored.
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
-      }
-      if (!resolved.hostKey) {
-        setProblem({
-          message:
-            'This screen needs the host link for this game. Open it from the page that created the game.',
-          canRetry: false,
-        });
+      if (!hasRoom) {
+        setProblem({ message: 'This game did not start. Launch a new one.', canRetry: false });
         return;
       }
-      const key = resolved.hostKey;
-      setHostKey(key);
-      const options: HostJoinOptions = { role: 'host', hostKey: key };
+      let pass;
       try {
-        joined = await new Client(realtimeUrl(window.location)).joinById(sessionId, options);
+        pass = await requestHostPass(gameSessionId);
+      } catch {
+        if (cancelled) return;
+        setProblem({ message: 'Could not reach the website. Try again.', canRetry: true });
+        return;
+      }
+      if (cancelled) return;
+      if (!pass.ok) {
+        setProblem(
+          pass.reason === 'signedOut'
+            ? { message: 'You have been signed out. Sign in again to host.', canRetry: false }
+            : pass.reason === 'notConfigured'
+              ? { message: 'The game server is not set up on this website.', canRetry: false }
+              : { message: 'Could not find this game.', canRetry: false },
+        );
+        return;
+      }
+      const options: HostJoinOptions = { role: 'host', hostPass: pass.hostPass };
+      try {
+        joined = await new Client(realtimeUrl(window.location)).joinById(pass.roomId, options);
       } catch (error) {
         if (cancelled) return;
         const reason = joinProblemFromError(error);
         setProblem(
-          reason === 'wrongHostKey'
-            ? { message: 'This host link does not match the game.', canRetry: false }
+          reason === 'hostNotAllowed'
+            ? { message: 'This game belongs to another organisation.', canRetry: false }
             : reason === 'unreachable'
               ? {
                   message: 'Could not reach the game server. Check it is running, then try again.',
@@ -244,7 +264,7 @@ export function HostScreen({ sessionId }: { sessionId: string }) {
       void joined?.leave(true);
       setRoom(undefined);
     };
-  }, [sessionId, attempt]);
+  }, [gameSessionId, hasRoom, attempt]);
 
   useEffect(() => {
     if (!notice) return;
@@ -272,7 +292,7 @@ export function HostScreen({ sessionId }: { sessionId: string }) {
             </button>
           ) : null}
           <Link
-            href="/dev/new-game"
+            href="/dashboard/new-game"
             className={`${bigButton} flex items-center bg-slate-700 text-white`}
           >
             New game
@@ -309,7 +329,7 @@ export function HostScreen({ sessionId }: { sessionId: string }) {
       className="flex min-h-dvh flex-col gap-4 px-4 py-4 lg:h-dvh lg:px-8"
     >
       <header className="flex flex-wrap items-center gap-x-6 gap-y-2">
-        <h1 className="text-2xl font-black text-amber-400">{panel?.title ?? state.gameId}</h1>
+        <h1 className="text-2xl font-black text-amber-400">{gameName}</h1>
         <span
           data-testid="host-phase"
           className="rounded-full bg-slate-800 px-3 py-1 text-lg font-semibold"
@@ -489,7 +509,7 @@ export function HostScreen({ sessionId }: { sessionId: string }) {
             />
           </div>
           <Link
-            href="/dev/new-game"
+            href="/dashboard/new-game"
             className={`${bigButton} flex items-center justify-center self-center bg-amber-500 text-stone-900`}
           >
             New game
@@ -497,15 +517,15 @@ export function HostScreen({ sessionId }: { sessionId: string }) {
         </section>
       ) : null}
 
-      {hostKey && view.phase !== 'ended' ? (
+      {view.phase !== 'ended' ? (
         <details className="text-slate-400">
           <summary className="cursor-pointer">Show this screen on another device</summary>
           <p className="mt-2 text-sm">
-            Open this link on the other screen. It gives control of the game, so do not share it
-            with players.
+            Open this address on the other screen and sign in there with an account in your
+            organisation. Players who open it only see a sign-in page.
           </p>
           <p data-testid="host-link" className="text-sm break-all text-slate-300">
-            {hostScreenLink(origin, sessionId, hostKey)}
+            {`${origin}/host/${encodeURIComponent(gameSessionId)}`}
           </p>
         </details>
       ) : null}

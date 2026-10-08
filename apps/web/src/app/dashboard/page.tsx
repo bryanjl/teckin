@@ -2,14 +2,13 @@ import { questionSetReadiness } from '@teckin/questions';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { signOutHost } from '../../auth/actions';
+import { gameDisplayName } from '../../games/registry';
 import { requireHost } from '../../lib/server/host';
 import { csvTemplatePath } from './sets/csv-template-path';
 import { buttonClass, primaryButtonClass } from './sets/editor-styles';
 
 export const metadata: Metadata = { title: 'Dashboard · Teckin' };
 
-// M4.3's game registry replaces this with each game's own display name.
-const gameNames: Record<string, string> = { climber: 'Climber' };
 const statusLabels: Record<string, string> = {
   lobby: 'Waiting to start',
   playing: 'Playing now',
@@ -154,9 +153,17 @@ export default async function DashboardPage({
                 key={game.id}
                 className="flex flex-col gap-1 rounded-2xl bg-surface-raised px-4 py-3"
               >
-                <span className="text-lg font-semibold">
-                  {gameNames[game.gameType] ?? game.gameType}
-                </span>
+                {game.status !== 'ended' && game.roomId ? (
+                  <Link
+                    href={`/host/${game.id}`}
+                    className="inline-flex min-h-touch items-center text-lg font-semibold text-accent underline underline-offset-4"
+                    data-testid="recent-game-host-link"
+                  >
+                    {gameDisplayName(game.gameType)} · open host screen
+                  </Link>
+                ) : (
+                  <span className="text-lg font-semibold">{gameDisplayName(game.gameType)}</span>
+                )}
                 <span className="text-sm text-ink-muted">
                   {statusLabels[game.status] ?? game.status} · {shortDate.format(game.createdAt)} ·{' '}
                   {game._count.participants === 1

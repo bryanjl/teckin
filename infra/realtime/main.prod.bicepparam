@@ -8,5 +8,4 @@ param shardCpu = '1'
 param shardMemory = '2Gi'
 param redisSkuName = 'Balanced_B1'
 param redisHighAvailability = true
-// The deploy workflow passes realtimeImageTag and deployPrincipalId. Leave devGameSecret
-// empty in prod: Phase 4 replaces /dev/new-game with signed-in hosts.
+// The deploy workflow passes realtimeImageTag, realtimeSharedSecret and deployPrincipalId.
