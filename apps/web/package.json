@@ -17,9 +17,11 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@colyseus/sdk": "0.18.5",
     "@teckin/climber": "workspace:*",
     "@teckin/engine-core": "workspace:*",
     "@teckin/game-contracts": "workspace:*",
+    "@teckin/nicknames": "workspace:*",
     "@teckin/questions": "workspace:*",
     "@teckin/session": "workspace:*",
     "@teckin/ui": "workspace:*",

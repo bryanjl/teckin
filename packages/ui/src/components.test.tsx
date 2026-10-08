@@ -210,7 +210,8 @@ describe('ResultsScreen', () => {
     const rows = [...container.querySelectorAll('[data-testid="leaderboard-row"]')];
     expect(rows.map((row) => row.getAttribute('data-rank'))).toEqual(['1', '2', '3']);
     const own = container.querySelector('[data-own="true"]');
-    expect(own?.textContent).toContain('Bo (you)');
+    expect(own?.textContent).toContain('Bo');
+    expect(own?.textContent).toContain('You · 2 summits');
     expect(own?.textContent).toContain('420 m');
     expect(document.activeElement?.id).toBe('teckin-results-title');
   });

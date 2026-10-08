@@ -5,7 +5,7 @@ import { useId } from 'react';
 export interface LeaderboardProps {
   rows: readonly PlayerStanding[];
   appearance: ShellAppearance;
-  /** This device's player, highlighted and labelled "you". */
+  /** This device's player, highlighted and labelled "You". */
   ownPlayerId?: string;
   /** Heading shown above the list. */
   title?: string;
@@ -72,10 +72,14 @@ export function Leaderboard({
                   }}
                 >
                   {row.nickname}
-                  {isOwn ? ' (you)' : ''}
                 </span>
-                {row.detail ? (
+                {isOwn || row.detail ? (
                   <span style={{ display: 'block', fontSize: 14, color: appearance.textMuted }}>
+                    {isOwn ? (
+                      <strong style={{ color: appearance.accent }}>
+                        You{row.detail ? ' · ' : ''}
+                      </strong>
+                    ) : null}
                     {row.detail}
                   </span>
                 ) : null}

@@ -78,6 +78,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@colyseus/sdk':
+        specifier: 0.18.5
+        version: 0.18.5(@colyseus/core@0.18.18)(typescript@6.0.3)(zod@4.6.5)
       '@teckin/climber':
         specifier: workspace:*
         version: link:../../games/climber
@@ -87,6 +90,9 @@ importers:
       '@teckin/game-contracts':
         specifier: workspace:*
         version: link:../../packages/game-contracts
+      '@teckin/nicknames':
+        specifier: workspace:*
+        version: link:../../packages/nicknames
       '@teckin/questions':
         specifier: workspace:*
         version: link:../../packages/questions
