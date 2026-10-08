@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { basicNicknameCheck, LiveGame } from './live-game';
+import { platformNicknameCheck, LiveGame } from './live-game';
 
 function join(
   game: LiveGame,
@@ -10,21 +10,26 @@ function join(
   return game.admitPlayer({ playerId, nickname, deviceKeyHash, nowMs: 0 });
 }
 
-describe('basicNicknameCheck', () => {
+describe('platformNicknameCheck', () => {
   it('trims and collapses spaces', () => {
-    expect(basicNicknameCheck('  Blue   Fox ')).toBe('Blue Fox');
+    expect(platformNicknameCheck('  Blue   Fox ')).toBe('Blue Fox');
   });
 
   it('accepts letters from any language, digits, hyphens and apostrophes', () => {
-    expect(basicNicknameCheck('Zoë-2')).toBe('Zoë-2');
-    expect(basicNicknameCheck("O'Neil")).toBe("O'Neil");
+    expect(platformNicknameCheck('Zoë-2')).toBe('Zoë-2');
+    expect(platformNicknameCheck("O'Neil")).toBe("O'Neil");
   });
 
   it('rejects empty, long and symbol names', () => {
-    expect(basicNicknameCheck('   ')).toBeNull();
-    expect(basicNicknameCheck('x'.repeat(17))).toBeNull();
-    expect(basicNicknameCheck('<b>hi</b>')).toBeNull();
-    expect(basicNicknameCheck('-dash')).toBeNull();
+    expect(platformNicknameCheck('   ')).toBeNull();
+    expect(platformNicknameCheck('x'.repeat(17))).toBeNull();
+    expect(platformNicknameCheck('<b>hi</b>')).toBeNull();
+    expect(platformNicknameCheck('-dash')).toBeNull();
+  });
+
+  it('runs the profanity filter by default', () => {
+    const game = new LiveGame();
+    expect(join(game, 'a', 'Sh1t Head')).toEqual({ ok: false, reason: 'nicknameInvalid' });
   });
 });
 

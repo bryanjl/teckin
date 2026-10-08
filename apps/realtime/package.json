@@ -20,7 +20,8 @@
     "@teckin/game-contracts": "workspace:*",
     "@teckin/questions": "workspace:*",
     "@teckin/room-core": "workspace:*",
-    "zod": "4.6.5"
+    "zod": "4.6.5",
+    "@teckin/nicknames": "workspace:*"
   },
   "devDependencies": {
     "@colyseus/sdk": "0.18.5",

@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer, type Server as HttpServer } from 'node:http';
 import {
   createEndpoint,
@@ -21,6 +21,7 @@ import {
   joinCodePattern,
   type SessionRecorder,
 } from '@teckin/room-core';
+import { checkNickname } from '@teckin/nicknames';
 import { sampleQuestionSetIds } from '@teckin/questions';
 import { z } from 'zod';
 import { createRateLimiter } from './rate-limiter';
@@ -57,6 +58,11 @@ export const roomNames = {
 } as const;
 
 const createGameBodySchema = z.object({
+  /**
+   * The dev game secret, in the body because browsers only send custom headers after a CORS
+   * preflight that Colyseus' default CORS headers do not allow. The header still works.
+   */
+  secret: z.string().max(256).optional(),
   gameId: z.enum([roomNames.climber]),
   settings: roomSettingsSchema.partial().default({}),
   /** One of the bundled sample sets until Phase 4 brings hosts' own sets. */
@@ -73,7 +79,7 @@ const createGameBodySchema = z.object({
  */
 export function createRealtimeServer(options: RealtimeServerOptions = {}): RealtimeServer {
   const recorder = options.recorder ?? new InMemorySessionRecorder();
-  configureRoomServices({ recorder });
+  configureRoomServices({ recorder, checkNickname });
   const allowLookup = createRateLimiter({
     limit: options.joinLookupsPerMinute ?? 30,
     windowMs: 60_000,
@@ -103,11 +109,13 @@ export function createRealtimeServer(options: RealtimeServerOptions = {}): Realt
 
   const createDevGame = createEndpoint('/dev/games', { method: 'POST' }, async (ctx) => {
     const secret = options.devGameSecret;
-    const sentSecret = ctx.request?.headers.get('x-dev-game-secret');
-    if (!secret || sentSecret !== secret) {
+    const body = createGameBodySchema.safeParse(ctx.body ?? {});
+    const sentSecret =
+      ctx.request?.headers.get('x-dev-game-secret') ??
+      (body.success ? body.data.secret : undefined);
+    if (!secret || !sentSecret || !secretsMatch(sentSecret, secret)) {
       return Response.json({ error: 'forbidden' }, { status: 403 });
     }
-    const body = createGameBodySchema.safeParse(ctx.body ?? {});
     if (!body.success) {
       return Response.json({ error: 'invalidBody' }, { status: 400 });
     }
@@ -141,4 +149,10 @@ export function createRealtimeServer(options: RealtimeServerOptions = {}): Realt
 function clientAddress(request: Request | undefined): string {
   const forwarded = request?.headers.get('x-forwarded-for');
   return forwarded?.split(',')[0]?.trim() || request?.headers.get('x-real-ip') || 'unknown';
+}
+
+/** Compares two secrets in constant time (hashed first so lengths never leak). */
+function secretsMatch(sent: string, expected: string): boolean {
+  const digest = (value: string) => createHash('sha256').update(value).digest();
+  return timingSafeEqual(digest(sent), digest(expected));
 }

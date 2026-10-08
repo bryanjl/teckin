@@ -1,3 +1,5 @@
+import { checkNickname } from '@teckin/nicknames';
+
 /** Where a game is in its life. Every game shares these phases. */
 export type GamePhase = 'lobby' | 'countdown' | 'playing' | 'ended';
 
@@ -62,16 +64,10 @@ export type LiveGameEvent =
 export type NicknameCheck = (nickname: string) => string | null;
 
 /**
- * The default nickname check: trims, collapses spaces, and allows 1 to 16 letters, digits,
- * spaces, hyphens and apostrophes. The profanity filter wraps this (milestone M3.3).
+ * The default nickname check: the platform's shared rules (length, characters, digits and
+ * the profanity filter) from `@teckin/nicknames`, the same check the join form runs.
  */
-export const basicNicknameCheck: NicknameCheck = (nickname) => {
-  const cleaned = nickname.normalize('NFC').trim().replace(/\s+/g, ' ');
-  if (cleaned.length < 1 || cleaned.length > 16) {
-    return null;
-  }
-  return /^[\p{L}\p{N}][\p{L}\p{N} '-]*$/u.test(cleaned) ? cleaned : null;
-};
+export const platformNicknameCheck: NicknameCheck = checkNickname;
 
 /**
  * The shared game lifecycle and roster, free of any network framework so it can be unit
@@ -95,7 +91,7 @@ export class LiveGame {
 
   constructor(
     options: Partial<LiveGameOptions> = {},
-    checkNickname: NicknameCheck = basicNicknameCheck,
+    checkNickname: NicknameCheck = platformNicknameCheck,
   ) {
     this.options = { ...defaultLiveGameOptions, ...options };
     this.checkNickname = checkNickname;

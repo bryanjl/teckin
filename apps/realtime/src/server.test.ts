@@ -38,6 +38,30 @@ describe('realtime server', () => {
     expect((await createGame('wrong')).status).toBe(403);
   });
 
+  it('accepts the dev secret in the body, as the browser page sends it', async () => {
+    const send = (secret: string) =>
+      fetch(`${baseUrl}/dev/games`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: 'http://localhost:3000' },
+        body: JSON.stringify({ gameId: roomNames.climber, secret, questionSetId: 'spelling' }),
+      });
+    expect((await send('wrong-secret')).status).toBe(403);
+    const response = await send(devGameSecret);
+    expect(response.status).toBe(201);
+    expect(response.headers.get('access-control-allow-origin')).toBe('http://localhost:3000');
+  });
+
+  it('refuses nicknames the profanity filter catches', async () => {
+    const created = (await (await createGame()).json()) as { sessionId: string };
+    await expect(
+      colyseus.sdk.joinById(created.sessionId, {
+        role: 'player',
+        nickname: 'Sh1t Head',
+        deviceKey: randomUUID(),
+      }),
+    ).rejects.toThrow(/nicknameInvalid/);
+  });
+
   it('creates a game whose join code resolves to the room that players and the host can join', async () => {
     const response = await createGame();
     expect(response.status).toBe(201);

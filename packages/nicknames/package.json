@@ -1,0 +1,25 @@
+{
+  "name": "@teckin/nicknames",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Player nickname rules shared by the browser and the server: cleaning, the profanity filter and the safe random-name generator.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "obscenity": "0.4.6"
+  },
+  "devDependencies": {
+    "@teckin/config": "workspace:*",
+    "@types/node": "22.20.5",
+    "eslint": "10.12.0",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3"
+  }
+}
