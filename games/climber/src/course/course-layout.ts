@@ -8,9 +8,56 @@
 /** A one-way platform: height of its top above the ground in tiles, first column, width. */
 export type PlatformSpec = readonly [heightTiles: number, column: number, width: number];
 
+/**
+ * A moving ledge: height of its top in tiles, starting column, width in tiles, sideways
+ * travel in tiles (negative goes left), seconds per there-and-back cycle, starting phase 0–1.
+ */
+export type MoverSpec = readonly [
+  heightTiles: number,
+  column: number,
+  width: number,
+  travelTiles: number,
+  periodSeconds: number,
+  phase: number,
+];
+
+/**
+ * A steam vent on a wall: lowest and highest height (tiles) of its zone, the side it
+ * blows from, how far its push reaches (tiles), push speed (px/s), seconds on and off,
+ * and the offset into its cycle.
+ */
+export type VentLayoutSpec = readonly [
+  fromHeight: number,
+  toHeight: number,
+  side: 'left' | 'right',
+  reachTiles: number,
+  pushSpeed: number,
+  onSeconds: number,
+  offSeconds: number,
+  offsetSeconds: number,
+];
+
+/**
+ * A spark barrier: the height (tiles) it crosses at, first column, width in tiles, seconds
+ * on and off, and the offset into its cycle.
+ */
+export type BarrierLayoutSpec = readonly [
+  heightTiles: number,
+  column: number,
+  width: number,
+  onSeconds: number,
+  offSeconds: number,
+  offsetSeconds: number,
+];
+
 /** One summit: the platforms leading up to it and the summit ledge itself. */
 export interface SummitSpec {
   platforms: readonly PlatformSpec[];
+  /** Ledges that crumble a moment after being stood on and come back later. */
+  crumbling?: readonly PlatformSpec[];
+  movers?: readonly MoverSpec[];
+  vents?: readonly VentLayoutSpec[];
+  barriers?: readonly BarrierLayoutSpec[];
   /** The ledge at the top of the summit, where the summit is reached. */
   summit: PlatformSpec;
 }
@@ -25,7 +72,7 @@ export const skyRowsTiles = 10;
 export const spawnColumn = 2;
 
 /**
- * Summits 1 and 2. Summit 1 teaches movement: wide ledges, 3-tile steps that a single jump
+ * The six summits. Summit 1 teaches movement: wide ledges, 3-tile steps that a single jump
  * clears, each ledge overlapping the one below. Summit 2 adds 4-tile steps that need the
  * double jump and sideways gaps that need a running start.
  */
@@ -68,11 +115,104 @@ export const courseSummits: readonly SummitSpec[] = [
     ],
     summit: [96, 3, 6],
   },
+  {
+    // Pendulum Hall: moving ledges. Each one swings under a ledge that is too high to reach
+    // from below, so it has to be ridden.
+    platforms: [
+      [100, 6, 4],
+      [103, 2, 4],
+      [111, 5, 3],
+      [114, 1, 4],
+      [117, 5, 4],
+      [120, 7, 3],
+      [128, 2, 3],
+      [131, 6, 4],
+      [134, 2, 4],
+      [137, 6, 4],
+      [140, 3, 4],
+    ],
+    movers: [
+      [107, 1, 3, 6, 5, 0],
+      [124, 7, 3, -6, 6, 0.25],
+    ],
+    summit: [144, 2, 7],
+  },
+  {
+    // Chime Loft: crumbling ledges and steam vents that push sideways.
+    platforms: [
+      [147, 6, 3],
+      [153, 5, 4],
+      [159, 4, 3],
+      [162, 0, 3],
+      [165, 4, 3],
+      [171, 3, 3],
+      [177, 3, 4],
+      [183, 3, 3],
+      [186, 6, 4],
+      [189, 2, 4],
+    ],
+    crumbling: [
+      [150, 2, 3],
+      [156, 8, 3],
+      [168, 7, 3],
+      [174, 7, 3],
+      [180, 7, 3],
+    ],
+    vents: [
+      [158, 163, 'left', 5, 90, 2, 2, 0],
+      [172, 178, 'right', 5, -90, 2.5, 1.5, 1],
+    ],
+    summit: [192, 3, 6],
+  },
+  {
+    // Clock Face: spark barriers across the way up, and 4-tile steps that need the double
+    // jump.
+    platforms: [
+      [196, 7, 3],
+      [200, 3, 3],
+      [204, 5, 3],
+      [208, 9, 3],
+      [212, 5, 3],
+      [216, 1, 3],
+      [220, 5, 3],
+      [224, 9, 3],
+      [228, 5, 2],
+      [232, 1, 3],
+      [236, 5, 3],
+    ],
+    barriers: [
+      [202, 2, 5, 1.5, 2.5, 0],
+      [214, 3, 6, 1.5, 2, 1],
+      [230, 0, 6, 2, 2, 0.5],
+    ],
+    summit: [240, 3, 6],
+  },
+  {
+    // The Bell: everything at once, with narrow ledges and 5-tile double jumps.
+    platforms: [
+      [245, 7, 3],
+      [250, 2, 3],
+      [258, 7, 2],
+      [266, 7, 2],
+      [270, 3, 2],
+      [275, 7, 2],
+      [283, 7, 3],
+    ],
+    crumbling: [
+      [262, 3, 3],
+      [279, 3, 3],
+    ],
+    movers: [[254, 1, 3, 6, 5, 0.5]],
+    vents: [[263, 268, 'right', 5, -100, 2, 2, 0]],
+    barriers: [[272, 0, 12, 1.5, 2.5, 0]],
+    summit: [288, 3, 6],
+  },
 ];
 
 /** Tile ids inside the course tileset (Tiled adds `firstgid`, which is 1). */
 const groundTile = 0;
 const platformTile = 1;
+const crumblingTile = 2;
 
 /** Builds the course as a Tiled 1.11 JSON map. */
 export function buildCourseTiledMap(): Record<string, unknown> {
@@ -92,10 +232,15 @@ export function buildCourseTiledMap(): Record<string, unknown> {
   for (let row = groundRow; row < rows; row += 1) {
     for (let column = 0; column < courseWidthTiles; column += 1) place(row, column, groundTile);
   }
-  for (const { platforms, summit } of courseSummits) {
+  for (const { platforms, summit, crumbling = [] } of courseSummits) {
     for (const [height, column, width] of [...platforms, summit]) {
       for (let offset = 0; offset < width; offset += 1) {
         place(rowOf(height), column + offset, platformTile);
+      }
+    }
+    for (const [height, column, width] of crumbling) {
+      for (let offset = 0; offset < width; offset += 1) {
+        place(rowOf(height), column + offset, crumblingTile);
       }
     }
   }
@@ -130,9 +275,71 @@ export function buildCourseTiledMap(): Record<string, unknown> {
     });
   });
 
-  const tileProperties = (collision: string, frame: string) => [
+  const nextId = (): number => objects.length + 1;
+  for (const { movers = [], vents = [], barriers = [] } of courseSummits) {
+    for (const [height, column, width, travel, period, phase] of movers) {
+      objects.push({
+        id: nextId(),
+        name: `mover-${nextId()}`,
+        type: 'movingPlatform',
+        x: column * tileSize,
+        y: rowOf(height) * tileSize,
+        width: width * tileSize,
+        height: tileSize,
+        rotation: 0,
+        visible: true,
+        properties: [
+          { name: 'travelTiles', type: 'float', value: travel },
+          { name: 'periodSeconds', type: 'float', value: period },
+          { name: 'phase', type: 'float', value: phase },
+        ],
+      });
+    }
+    for (const [fromHeight, toHeight, side, reach, push, on, off, offset] of vents) {
+      const x = side === 'left' ? 0 : (courseWidthTiles - reach) * tileSize;
+      objects.push({
+        id: nextId(),
+        name: `vent-${nextId()}`,
+        type: 'vent',
+        x,
+        y: rowOf(toHeight) * tileSize,
+        width: reach * tileSize,
+        height: (toHeight - fromHeight) * tileSize,
+        rotation: 0,
+        visible: true,
+        properties: [
+          { name: 'pushSpeed', type: 'float', value: push },
+          { name: 'onSeconds', type: 'float', value: on },
+          { name: 'offSeconds', type: 'float', value: off },
+          { name: 'offsetSeconds', type: 'float', value: offset },
+        ],
+      });
+    }
+    for (const [height, column, width, on, off, offset] of barriers) {
+      objects.push({
+        id: nextId(),
+        name: `barrier-${nextId()}`,
+        type: 'barrier',
+        x: column * tileSize,
+        // A thin beam centred on the line `height` tiles up.
+        y: rowOf(height) * tileSize - 4,
+        width: width * tileSize,
+        height: 8,
+        rotation: 0,
+        visible: true,
+        properties: [
+          { name: 'onSeconds', type: 'float', value: on },
+          { name: 'offSeconds', type: 'float', value: off },
+          { name: 'offsetSeconds', type: 'float', value: offset },
+        ],
+      });
+    }
+  }
+
+  const tileProperties = (collision: string, frame: string, hazard?: string) => [
     { name: 'collision', type: 'string', value: collision },
     { name: 'frame', type: 'string', value: frame },
+    ...(hazard ? [{ name: 'hazard', type: 'string', value: hazard }] : []),
   ];
   return {
     compressionlevel: -1,
@@ -178,7 +385,7 @@ export function buildCourseTiledMap(): Record<string, unknown> {
         margin: 0,
         name: 'course',
         spacing: 0,
-        tilecount: 2,
+        tilecount: 3,
         tileheight: tileSize,
         tiles: [
           {
@@ -194,6 +401,13 @@ export function buildCourseTiledMap(): Record<string, unknown> {
             imageheight: tileSize,
             imagewidth: tileSize,
             properties: tileProperties('oneWay', 'tile-platform'),
+          },
+          {
+            id: crumblingTile,
+            image: '../themes/placeholder/sprites/tile-crumbling.svg',
+            imageheight: tileSize,
+            imagewidth: tileSize,
+            properties: tileProperties('oneWay', 'tile-crumbling', 'crumbling'),
           },
         ],
         tilewidth: tileSize,

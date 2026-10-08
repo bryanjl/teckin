@@ -25,7 +25,8 @@ Each run takes the first unchecked milestone, finishes it, and ticks it. See `CL
   - Done 2026-10-08. `QuestionSheet` and `ResultsScreen` (React, `@teckin/ui`) rendered by the play page through the shell; synthesised sounds with a remembered mute toggle (`createSynthSoundPlayer` in `engine-core`); `?set=` picks the sample set; the autopilot answers through the real sheet.
 - [x] **M2.4 Cogspire theme.** Full SVG theme pack (robot with colour variants, tiles, hazards, backgrounds per summit), made the default.
   - Done 2026-10-08. `games/climber/themes/cogspire`: robot (8 variants), wind-up key and glow that follow energy, brass ledges, iron floor, moving/crumbling ledges, steam vent, spark barrier, six summit backdrops, lamp checkpoint, cog summit marker, UI icons. Default theme everywhere (`NEXT_PUBLIC_CLIMBER_THEME`, deploy workflow). Atlases now capped at 2048 px.
-- [ ] **M2.5 Summits 3–6.** Maps and hazards (moving platforms, crumbling ledges, vents, timed barriers).
+- [x] **M2.5 Summits 3–6.** Maps and hazards (moving platforms, crumbling ledges, vents, timed barriers).
+  - Done 2026-10-08. `HazardField` in `platformer-kit` (moving ledges that carry riders, vents, spark barriers, crumbling ledges on a per-player grid copy, all clocked by the course time); summits 3–6 in `course-layout.ts` (Pendulum Hall: movers; Chime Loft: crumbling + vents; Clock Face: barriers + double jumps; The Bell: everything); `HazardArt` draws them; the bot rides movers and waits for barriers. Perfect-play bot climb: about 115 s of climbing. E2E: every profile climbs past summit 2; iPhone portrait runs the whole course to the results screen.
 - [ ] **M2.6 Balance and wrap-up.** Tuning panel, scripted bot playtests recorded in `docs/playtests.md`, all Phase 2 acceptance tests, `docs/demos/phase-2.md`, self-review and fixes.
 
 ## Phase 3: Multiplayer
@@ -73,3 +74,4 @@ One line per run: date (UTC), milestone, outcome.
 - 2026-10-08 — M2.2 Session and energy — done.
 - 2026-10-08 — M2.3 Question sheet and results UI — done.
 - 2026-10-08 — M2.4 Cogspire theme — done.
+- 2026-10-08 — M2.5 Summits 3–6 — done.

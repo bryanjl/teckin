@@ -8,3 +8,4 @@ export * from './controller';
 export * from './tiled';
 export * from './course-progress';
 export * from './course-bot';
+export * from './hazards';

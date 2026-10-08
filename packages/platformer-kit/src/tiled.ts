@@ -85,6 +85,8 @@ export interface MapTile {
   frame: string;
   /** Name of the Tiled layer the tile came from, in draw order. */
   layer: string;
+  /** The tile's `hazard` property, e.g. `crumbling`, when it has one. */
+  hazard?: string;
 }
 
 /** An object from an object layer, in world pixels. Points have zero width and height. */
@@ -132,7 +134,7 @@ export function loadTiledMap(json: unknown): PlatformerMap {
     throw new MapFormatError('Tiles must be square');
   }
 
-  const tileInfo = new Map<number, { frame?: string; collision: TileCollision }>();
+  const tileInfo = new Map<number, { frame?: string; hazard?: string; collision: TileCollision }>();
   for (const tileset of map.tilesets) {
     for (const tile of tileset.tiles) {
       const properties = toRecord(tile.properties);
@@ -143,8 +145,10 @@ export function loadTiledMap(json: unknown): PlatformerMap {
         );
       }
       const frame = typeof properties.frame === 'string' ? properties.frame : undefined;
+      const hazard = typeof properties.hazard === 'string' ? properties.hazard : undefined;
       tileInfo.set(tileset.firstgid + tile.id, {
         ...(frame ? { frame } : {}),
+        ...(hazard ? { hazard } : {}),
         collision: collision as TileCollision,
       });
     }
@@ -170,7 +174,13 @@ export function loadTiledMap(json: unknown): PlatformerMap {
         const row = Math.floor(index / layer.width);
         if (info.collision !== 'empty') grid.set(column, row, info.collision);
         if (info.frame && layer.visible !== false) {
-          tiles.push({ column, row, frame: info.frame, layer: layer.name });
+          tiles.push({
+            column,
+            row,
+            frame: info.frame,
+            layer: layer.name,
+            ...(info.hazard ? { hazard: info.hazard } : {}),
+          });
         }
       });
     } else if (layer.type === 'objectgroup') {

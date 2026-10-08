@@ -1,11 +1,11 @@
 import type { EnergySpendReason } from '@teckin/game-contracts';
 import {
   CourseProgress,
+  HazardField,
   createPlatformerBody,
   footOf,
-  stepPlatformer,
+  type HazardEvent,
   type PlatformerBody,
-  type PlatformerEvent,
 } from '@teckin/platformer-kit';
 import type { ClimberCourse } from '../course/course';
 import type { ClimberTunables } from '../tunables';
@@ -28,7 +28,7 @@ export interface RunInput {
 
 /** What happened in one {@link ClimberRun.step}. */
 export interface RunStepResult {
-  events: PlatformerEvent[];
+  events: HazardEvent[];
   /** Index of a summit reached in this step. */
   reachedSummit?: number;
   /** True in the step that reached the last summit. */
@@ -45,6 +45,8 @@ export class ClimberRun {
   /** The body one step ago, for interpolated drawing. */
   previousBody: PlatformerBody;
   readonly progress: CourseProgress;
+  /** This player's hazards, on their own copy of the collision grid. */
+  readonly hazards: HazardField;
   elapsedSeconds = 0;
   completed = false;
   /** 0 on the ground, 1 after a jump, 2 after the double jump. */
@@ -60,6 +62,7 @@ export class ClimberRun {
     this.body = this.spawnBody(course.spawn.x, course.spawn.y);
     this.previousBody = this.body;
     this.progress = new CourseProgress(course.summits, checkpointsEnabled);
+    this.hazards = new HazardField(course.hazards, course.map.grid.clone());
   }
 
   /** Feet position, world pixels. */
@@ -83,7 +86,7 @@ export class ClimberRun {
     const { physics } = this.tunables;
     const limits = energyLimits(this.energy.energy, this.tunables);
     this.previousBody = this.body;
-    const result = stepPlatformer(
+    const result = this.hazards.step(
       this.body,
       {
         left: input.left,
@@ -94,7 +97,6 @@ export class ClimberRun {
         airJumpAllowed: limits.airJumpAllowed,
         speedScale: limits.speedScale,
       },
-      this.course.map.grid,
       physics,
       physics.fixedStep,
     );
@@ -112,7 +114,11 @@ export class ClimberRun {
       }
       if (event === 'land') this.jumpsUsed = 0;
     }
-    this.chargeWalking(limits.crawling, Math.abs(this.body.x - this.previousBody.x));
+    // Only the player's own movement costs energy, not being carried or blown along.
+    this.chargeWalking(
+      limits.crawling,
+      Math.abs(this.body.x - this.previousBody.x - result.pushedX),
+    );
 
     const update = this.progress.update(
       { x: this.body.x, y: this.body.y, width: physics.bodyWidth, height: physics.bodyHeight },
@@ -131,6 +137,7 @@ export class ClimberRun {
   restart(): void {
     this.placeAt(this.course.spawn.x, this.course.spawn.y);
     this.progress.reset();
+    this.hazards.reset();
     this.elapsedSeconds = 0;
     this.completed = false;
   }

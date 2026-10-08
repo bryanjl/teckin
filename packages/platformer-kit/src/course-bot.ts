@@ -8,6 +8,16 @@ export interface Ledge {
   fromColumn: number;
   toColumn: number;
   collision: Exclude<TileCollision, 'empty'>;
+  /** True for a ledge that moves (a moving platform); its columns may be fractional. */
+  moving?: boolean;
+}
+
+/** What the bot may know about hazards: moving ledges and when to hold still. */
+export interface BotHazardView {
+  /** Ledges that move, at their current positions. */
+  movingLedges: () => Ledge[];
+  /** True when the bot, standing still, should wait (for example for a barrier). */
+  shouldWait?: (body: PlatformerBody, target: Ledge | undefined) => boolean;
 }
 
 /** Buttons the bot wants held this frame. */
@@ -55,6 +65,7 @@ export class CourseBot {
     private readonly tuning: PlatformerTuning,
     /** Highest climb, in tiles, the bot will attempt in one go. */
     private readonly maxRiseTiles = 5,
+    private readonly hazards?: BotHazardView,
   ) {
     this.ledges = findLedges(grid);
   }
@@ -70,8 +81,21 @@ export class CourseBot {
     const foot = footOf(body, this.tuning);
     const buttons: BotButtons = { left: false, right: false, jump: false };
 
+    const moving = this.hazards?.movingLedges() ?? [];
+    if (this.target?.moving) {
+      // Follow the moving ledge being aimed at to where it is now.
+      const previous = this.target;
+      this.target = moving
+        .filter((ledge) => ledge.row === previous.row)
+        .sort(
+          (a, b) =>
+            Math.abs(a.fromColumn - previous.fromColumn) -
+            Math.abs(b.fromColumn - previous.fromColumn),
+        )[0];
+    }
+
     if (body.onGround) {
-      const standing = this.ledgeUnder(foot.x, foot.y);
+      const standing = this.ledgeUnder(foot.x, foot.y, moving);
       if (!standing) return this.remember(buttons);
       const target0 = this.target;
       if (
@@ -79,10 +103,17 @@ export class CourseBot {
         target0.row >= standing.row ||
         standing.row - target0.row > this.maxRiseTiles
       ) {
-        this.target = this.pickTarget(standing);
+        this.target = this.pickTarget(standing, moving);
       }
       const target = this.target;
       if (!target) return this.remember(buttons);
+      if (this.hazards?.shouldWait?.(body, target)) return this.remember(buttons);
+      // A moving ledge (or a ledge reached from one) is only worth jumping for while the two
+      // overlap; until then, wait where we are and let the platform come round.
+      if ((target.moving || standing.moving) && !this.overlapsColumns(standing, target)) {
+        if (standing.moving) this.steerTowardTarget(foot.x, standing, buttons, true);
+        return this.remember(buttons);
+      }
 
       const takeOff = this.takeOffX(standing, target);
       const distance = takeOff - foot.x;
@@ -140,11 +171,11 @@ export class CourseBot {
     buttons.right = aim > footX;
   }
 
-  private ledgeUnder(footX: number, footY: number): Ledge | undefined {
+  private ledgeUnder(footX: number, footY: number, moving: readonly Ledge[]): Ledge | undefined {
     const size = this.grid.tileSize;
     const row = Math.round(footY / size);
     const half = this.tuning.bodyWidth / 2;
-    return this.ledges.find(
+    return [...moving, ...this.ledges].find(
       (ledge) =>
         ledge.row === row &&
         footX + half > ledge.fromColumn * size &&
@@ -152,10 +183,10 @@ export class CourseBot {
     );
   }
 
-  private pickTarget(standing: Ledge): Ledge | undefined {
+  private pickTarget(standing: Ledge, moving: readonly Ledge[]): Ledge | undefined {
     const size = this.grid.tileSize;
     const centre = ((standing.fromColumn + standing.toColumn + 1) / 2) * size;
-    const candidates = this.ledges.filter(
+    const candidates = [...this.ledges, ...moving].filter(
       (ledge) => ledge.row < standing.row && standing.row - ledge.row <= this.maxRiseTiles,
     );
     candidates.sort((a, b) => {

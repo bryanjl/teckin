@@ -21,6 +21,20 @@ export interface ClimberTunables {
   courseHeightMetres: number;
   /** How far below the checkpoint, in tiles, a player must fall before respawn is offered. */
   respawnOfferDropTiles: number;
+  /** Hazard timings shared by every hazard of a kind; positions come from the map. */
+  hazards: ClimberHazardTunables;
+}
+
+/** Hazard numbers that are the same everywhere on the course. */
+export interface ClimberHazardTunables {
+  /** Seconds a crumbling ledge shakes after being stood on before it falls. */
+  crumbleDelaySeconds: number;
+  /** Seconds before a fallen ledge comes back. */
+  crumbleRespawnSeconds: number;
+  /** Downward speed a spark barrier gives the player, px/s. */
+  barrierKnockSpeed: number;
+  /** Seconds before a barrier switches on that it flickers as a warning. */
+  barrierWarningSeconds: number;
 }
 
 /**
@@ -53,6 +67,12 @@ export const defaultClimberTunables: Readonly<ClimberTunables> = Object.freeze({
   energyMeterFull: 200,
   courseHeightMetres: 1000,
   respawnOfferDropTiles: 3,
+  hazards: Object.freeze({
+    crumbleDelaySeconds: 0.9,
+    crumbleRespawnSeconds: 3,
+    barrierKnockSpeed: 350,
+    barrierWarningSeconds: 0.6,
+  }),
   physics: Object.freeze({
     tileSize: 32,
     worldWidthTiles: 12,

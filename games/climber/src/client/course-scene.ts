@@ -6,10 +6,12 @@ import {
   type PlatformerAction,
 } from '@teckin/engine-core';
 import { ThemeTextures, chooseThemeTextureScale } from '@teckin/engine-core/phaser';
-import { CourseBot, FixedStepper, footOf, type PlatformerEvent } from '@teckin/platformer-kit';
+import { FixedStepper, footOf, type CourseBot, type HazardEvent } from '@teckin/platformer-kit';
 import type { ClimberCourse } from '../course/course';
 import { climberOptionalFrames } from '../theme';
+import { createClimberBot } from '../run/climber-bot';
 import { ClimberRun, type EnergyAccount } from '../run/climber-run';
+import { HazardArt } from './hazard-art';
 import type { ClimberTunables } from '../tunables';
 
 /** Which theme atlas the scene loaded, for the debug overlay and tests. */
@@ -67,7 +69,7 @@ export interface CourseSceneOptions {
   /** Called after every frame with the HUD state. */
   onFrame: (state: CourseHudState) => void;
   /** Called when a ground or air jump happens, for haptics and sound. */
-  onPlayerEvent?: (event: PlatformerEvent) => void;
+  onPlayerEvent?: (event: HazardEvent) => void;
   /** Called when a summit is reached (0-based index). */
   onSummit?: (summitIndex: number, elapsedSeconds: number) => void;
   /** Called once when the last summit is reached. */
@@ -94,6 +96,7 @@ export class CourseScene extends Phaser.Scene {
   private energyKeyArt?: Phaser.GameObjects.Image;
   private energyGlowArt?: Phaser.GameObjects.Image;
   private keyAngle = 0;
+  private hazardArt?: HazardArt;
   private run!: ClimberRun;
   private stepper!: FixedStepper;
   private bot?: CourseBot;
@@ -183,7 +186,7 @@ export class CourseScene extends Phaser.Scene {
   /** Turns the autopilot on or off mid-run. Debug and test use only. */
   setAutopilot(enabled: boolean): void {
     if (enabled) {
-      this.bot ??= new CourseBot(this.options.course.map.grid, this.options.tunables.physics);
+      this.bot ??= createClimberBot(this.run);
       return;
     }
     this.bot = undefined;
@@ -251,7 +254,11 @@ export class CourseScene extends Phaser.Scene {
 
     this.stepper = new FixedStepper(tunables.physics.fixedStep);
     this.run = new ClimberRun(course, tunables, this.options.energy, checkpointsEnabled);
-    if (this.options.autopilot) this.bot = new CourseBot(map.grid, tunables.physics);
+    if (this.options.autopilot) this.bot = createClimberBot(this.run);
+    const reducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+    this.hazardArt = new HazardArt(this, textures, this.run, reducedMotion);
     if (textures.hasFrame(climberOptionalFrames.energyGlow)) {
       this.energyGlowArt = textures
         .image(this, 0, 0, climberOptionalFrames.energyGlow)
@@ -292,6 +299,7 @@ export class CourseScene extends Phaser.Scene {
       this.syncPlayerArt(alpha);
     }
     this.animateEnergy(deltaMs / 1000);
+    this.hazardArt?.update();
     this.options.onFrame(this.hudState());
   }
 
@@ -394,9 +402,10 @@ export class CourseScene extends Phaser.Scene {
   /** Draws map tiles, merging runs of the same frame on a row into one repeating sprite. */
   private drawTiles(textures: ThemeTextures): void {
     const { tileSize } = this.options.tunables.physics;
-    const sorted = [...this.options.course.map.tiles].sort(
-      (a, b) => a.row - b.row || a.column - b.column,
-    );
+    // Hazard tiles (crumbling ledges) are drawn by HazardArt so they can shake and vanish.
+    const sorted = this.options.course.map.tiles
+      .filter((tile) => !tile.hazard)
+      .sort((a, b) => a.row - b.row || a.column - b.column);
     let index = 0;
     while (index < sorted.length) {
       const first = sorted[index];

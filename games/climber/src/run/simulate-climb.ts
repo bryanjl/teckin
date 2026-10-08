@@ -1,7 +1,7 @@
 import type { GameSession, PresentedQuestion } from '@teckin/game-contracts';
-import { CourseBot } from '@teckin/platformer-kit';
 import type { ClimberCourse } from '../course/course';
 import type { ClimberTunables } from '../tunables';
+import { createClimberBot } from './climber-bot';
 import { ClimberRun } from './climber-run';
 
 /** Options for {@link simulateClimb}. */
@@ -41,6 +41,10 @@ export interface SimulatedClimb {
   jumps: number;
   airJumps: number;
   energySpent: number;
+  /** Times a barrier knocked the player down. */
+  knockdowns: number;
+  /** Times a ledge crumbled under the player. */
+  crumbles: number;
 }
 
 /**
@@ -64,7 +68,7 @@ export async function simulateClimb(options: SimulateClimbOptions): Promise<Simu
     },
   };
   const run = new ClimberRun(course, tunables, energy, false);
-  const bot = new CourseBot(course.map.grid, physics);
+  const bot = createClimberBot(run);
   const maxSeconds = options.maxSimulatedSeconds ?? 60 * 60;
   const result: SimulatedClimb = {
     finished: false,
@@ -79,6 +83,8 @@ export async function simulateClimb(options: SimulateClimbOptions): Promise<Simu
     jumps: 0,
     airJumps: 0,
     energySpent: 0,
+    knockdowns: 0,
+    crumbles: 0,
   };
   let jumpWasDown = false;
 
@@ -108,6 +114,8 @@ export async function simulateClimb(options: SimulateClimbOptions): Promise<Simu
     for (const event of step.events) {
       if (event === 'jump') result.jumps += 1;
       if (event === 'airJump') result.airJumps += 1;
+      if (event === 'knockedDown') result.knockdowns += 1;
+      if (event === 'crumbled') result.crumbles += 1;
     }
     if (step.reachedSummit !== undefined) {
       result.summitsReached = step.reachedSummit + 1;

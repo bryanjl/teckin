@@ -229,31 +229,50 @@ test('the HUD shows the height in metres and the summit being climbed', async ({
 
 test('the course can be climbed from the start to the top of summit 2', async ({ page }) => {
   test.setTimeout(150_000);
-  // The autopilot presses the same actions a player does, through the same input state.
+  // The autopilot presses the same actions a player does, through the same input state,
+  // and answers questions through the real sheet when it needs energy.
   await openGame(page, '?debug=1&autopilot=1');
   await expect
     .poll(async () => page.evaluate(() => window.__teckinGame?.course().summitsReached), {
       timeout: 120_000,
       intervals: [1_000],
     })
-    .toBeGreaterThanOrEqual(1);
-  await expect(page.getByTestId('hud-summit')).toHaveText('Gear Gallery');
-  await expect(page.getByTestId('results-screen')).toBeVisible({ timeout: 120_000 });
+    .toBeGreaterThanOrEqual(2);
+  await expect(page.getByTestId('hud-summit')).toHaveText('Pendulum Hall');
+  const course = await page.evaluate(() => window.__teckinGame?.course());
+  expect(course?.heightMetres).toBeGreaterThanOrEqual(333);
+});
+
+test('a full solo run reaches the results screen, and Play again starts over', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name !== 'iphone-portrait',
+    'one profile is enough for the long run; the others climb two summits',
+  );
+  test.setTimeout(420_000);
+  await openGame(page, '?debug=1&autopilot=1&set=general-knowledge');
+  await expect(page.getByTestId('results-screen')).toBeVisible({ timeout: 400_000 });
   await expect(page.getByTestId('game-root')).toHaveAttribute('data-game-status', 'complete');
   await expect(page.getByTestId('results-time')).toHaveText(/^Time \d+:\d\d\.\d$/);
+  await expect(page.getByTestId('result-summits-reached')).toHaveText('6 of 6');
   // The autopilot answered questions through the real sheet to pay for the climb.
   expect(Number(await page.getByTestId('result-questions-answered').textContent())).toBeGreaterThan(
-    0,
+    5,
   );
+  await expect(page.getByTestId('result-accuracy')).toHaveText('100%');
   const finish = await page.evaluate(() => window.__teckinGame?.course());
-  expect(finish?.heightMetres).toBeGreaterThanOrEqual(333);
+  expect(finish?.heightMetres).toBeGreaterThanOrEqual(1000);
 
+  await page.evaluate(() => window.__teckinGame?.setAutopilot(false));
   await page.getByTestId('play-again-button').tap();
   await expect(page.getByTestId('results-screen')).toBeHidden();
   await expect(page.getByTestId('game-root')).toHaveAttribute('data-game-status', 'running');
   const restarted = await page.evaluate(() => window.__teckinGame?.course());
   expect(restarted?.summitsReached).toBe(0);
   expect(restarted?.elapsedSeconds).toBeLessThan(5);
+  // A fresh session: starting energy again and no answers carried over.
+  expect(await page.evaluate(() => window.__teckinGame?.energy())).toBe(50);
 });
 
 test('with checkpoints on, a player who falls below summit 1 can go back to it', async ({

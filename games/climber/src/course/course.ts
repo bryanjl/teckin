@@ -1,6 +1,9 @@
 import {
   createHeightScale,
+  crumblingLedgesFromTiles,
   loadTiledMap,
+  type HazardLayout,
+  type MapObject,
   objectsOfType,
   singleObjectOfType,
   type CourseGoal,
@@ -24,6 +27,8 @@ export interface ClimberCourse {
   summits: ClimberSummit[];
   /** World y of the feet → height in metres shown in the HUD. */
   heightAt: (footY: number) => number;
+  /** Moving ledges, vents, barriers and crumbling ledges. */
+  hazards: HazardLayout;
 }
 
 /**
@@ -33,7 +38,7 @@ export interface ClimberCourse {
  */
 export function createClimberCourse(
   mapJson: unknown,
-  tunables: Pick<ClimberTunables, 'courseHeightMetres' | 'physics'>,
+  tunables: Pick<ClimberTunables, 'courseHeightMetres' | 'physics' | 'hazards'>,
 ): ClimberCourse {
   const map = loadTiledMap(mapJson);
   if (map.tileSize !== tunables.physics.tileSize) {
@@ -76,8 +81,46 @@ export function createClimberCourse(
     { y: spawn.y, height: 0 },
     ...summits.map((summit) => ({ y: summit.respawnY, height: summit.number * metresPerSummit })),
   ]);
-  return { map, spawn, summits, heightAt };
+  const hazards: HazardLayout = {
+    movingPlatforms: objectsOfType(map, 'movingPlatform').map((object) => ({
+      id: String(object.id),
+      x: object.x,
+      y: object.y,
+      width: object.width,
+      height: object.height,
+      travelX: numberProperty(object, 'travelTiles') * map.tileSize,
+      periodSeconds: numberProperty(object, 'periodSeconds'),
+      phase: numberProperty(object, 'phase', 0),
+    })),
+    vents: objectsOfType(map, 'vent').map((object) => ({
+      ...timedZone(object),
+      pushSpeed: numberProperty(object, 'pushSpeed'),
+    })),
+    barriers: objectsOfType(map, 'barrier').map(timedZone),
+    crumblingLedges: crumblingLedgesFromTiles(map.tiles),
+    crumbleDelaySeconds: tunables.hazards.crumbleDelaySeconds,
+    crumbleRespawnSeconds: tunables.hazards.crumbleRespawnSeconds,
+    barrierKnockSpeed: tunables.hazards.barrierKnockSpeed,
+  };
+  return { map, spawn, summits, heightAt, hazards };
 }
 
-/** The bundled course (summits 1 and 2). */
+function numberProperty(object: MapObject, name: string, fallback?: number): number {
+  const value = object.properties[name];
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (fallback !== undefined) return fallback;
+  throw new Error(`Map object ${object.id} (${object.type}) needs a number "${name}" property`);
+}
+
+function timedZone(object: MapObject) {
+  return {
+    id: String(object.id),
+    zone: { x: object.x, y: object.y, width: object.width, height: object.height },
+    onSeconds: numberProperty(object, 'onSeconds'),
+    offSeconds: numberProperty(object, 'offSeconds'),
+    offsetSeconds: numberProperty(object, 'offsetSeconds', 0),
+  };
+}
+
+/** The bundled course (all six summits). */
 export const bundledCourseMap: unknown = courseMapJson;

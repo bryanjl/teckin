@@ -59,6 +59,13 @@ export class CollisionGrid {
     return this.rows * this.tileSize;
   }
 
+  /** An independent copy, so hazards that change tiles (crumbling ledges) stay per player. */
+  clone(): CollisionGrid {
+    const copy = new CollisionGrid(this.columns, this.rows, this.tileSize);
+    copy.cells.set(this.cells);
+    return copy;
+  }
+
   /** Sets the collision of one tile. Out-of-range cells are ignored. */
   set(column: number, row: number, collision: TileCollision): void {
     if (!this.inside(column, row)) return;
