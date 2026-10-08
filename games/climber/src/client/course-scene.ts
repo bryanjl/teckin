@@ -173,6 +173,28 @@ export class CourseScene extends Phaser.Scene {
     this.cameras.main.centerOn(this.playerArt.x, this.playerArt.y);
   }
 
+  /**
+   * Puts the player back at the spawn point without resetting summits or the clock, as if
+   * they had fallen all the way down. Debug and test use only.
+   */
+  dropToStart(): void {
+    const { course, tunables } = this.options;
+    this.body = createPlatformerBody(course.spawn.x, course.spawn.y, tunables.physics);
+    this.previousBody = this.body;
+    this.stepper.reset();
+    this.syncPlayerArt(1);
+  }
+
+  /** Turns the autopilot on or off mid-run. Debug and test use only. */
+  setAutopilot(enabled: boolean): void {
+    if (enabled) {
+      this.bot ??= new CourseBot(this.options.course.map.grid, this.options.tunables.physics);
+      return;
+    }
+    this.bot = undefined;
+    this.options.actions.releaseSource(autopilotSource);
+  }
+
   /** Moves the player to the saved checkpoint, if there is one. */
   respawnAtCheckpoint(): void {
     const checkpoint = this.progress.checkpoint;

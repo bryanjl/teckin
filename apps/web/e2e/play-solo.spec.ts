@@ -1,5 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { ClimberDebugHooks } from '@teckin/climber/client';
+import { PNG } from 'pngjs';
+import {
+  buildSwappedTheme,
+  serveSwappedTheme,
+  swappedSpriteColour,
+  swappedSummitName,
+} from './support/swapped-theme';
 
 type PlayerSnapshot = ReturnType<ClimberDebugHooks['player']>;
 
@@ -243,4 +250,75 @@ test('the course can be climbed from the start to the top of summit 2', async ({
   const restarted = await page.evaluate(() => window.__teckinGame?.course());
   expect(restarted?.summitsReached).toBe(0);
   expect(restarted?.elapsedSeconds).toBeLessThan(5);
+});
+
+test('with checkpoints on, a player who falls below summit 1 can go back to it', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await openGame(page, '?debug=1&checkpoints=1&autopilot=1');
+  await expect
+    .poll(async () => page.evaluate(() => window.__teckinGame?.course().summitsReached), {
+      timeout: 90_000,
+      intervals: [500],
+    })
+    .toBeGreaterThanOrEqual(1);
+  await page.evaluate(() => {
+    window.__teckinGame?.setAutopilot(false);
+    window.__teckinGame?.dropToStart();
+  });
+  await waitForLanding(page);
+  const respawn = page.getByTestId('respawn-button');
+  await expect(respawn).toBeVisible();
+  expect((await page.evaluate(() => window.__teckinGame?.course()))?.heightMetres).toBeLessThan(10);
+
+  await respawn.tap();
+  await expect(respawn).toBeHidden();
+  await waitForLanding(page);
+  const atCheckpoint = await page.evaluate(() => window.__teckinGame?.course());
+  expect(atCheckpoint?.heightMetres).toBeGreaterThanOrEqual(166);
+  expect(atCheckpoint?.summitsReached).toBe(1);
+});
+
+test('swapping the theme folder changes the art and names with no code change', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const theme = await buildSwappedTheme();
+  await serveSwappedTheme(page, theme);
+
+  const spritePixelShare = async (): Promise<number> => {
+    const image = PNG.sync.read(await page.screenshot());
+    let matching = 0;
+    for (let index = 0; index < image.data.length; index += 4) {
+      const red = image.data[index] ?? 0;
+      const green = image.data[index + 1] ?? 0;
+      const blue = image.data[index + 2] ?? 0;
+      const near = (value: number, target: number): boolean => Math.abs(value - target) < 24;
+      if (
+        near(red, swappedSpriteColour.red) &&
+        near(green, swappedSpriteColour.green) &&
+        near(blue, swappedSpriteColour.blue)
+      ) {
+        matching += 1;
+      }
+    }
+    return matching / (image.width * image.height);
+  };
+
+  await openGame(page);
+  await waitForLanding(page);
+  expect(await spritePixelShare()).toBeLessThan(0.01);
+  await expect(page.getByTestId('hud-summit')).toHaveText('Summit 1');
+
+  await openGame(page, `?debug=1&theme=${theme.id}`);
+  await waitForLanding(page);
+  expect(await page.evaluate(() => window.__teckinGame?.theme())).toMatchObject({
+    id: theme.id,
+    loaded: true,
+  });
+  await expect(page.getByTestId('hud-summit')).toHaveText(swappedSummitName);
+  // The background, tiles and player are all theme sprites, so most of the course changes.
+  // Landscape leaves side margins in the token background colour, hence the lower bar.
+  expect(await spritePixelShare()).toBeGreaterThan(0.3);
 });

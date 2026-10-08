@@ -37,6 +37,10 @@ export interface ClimberDebugHooks {
   heldActions: () => string[];
   status: () => ClimberGameStatus;
   fps: () => number;
+  /** Turns the autopilot on or off. */
+  setAutopilot: (enabled: boolean) => void;
+  /** Sends the player back to the start, keeping summits and time, as after a long fall. */
+  dropToStart: () => void;
 }
 
 declare global {
@@ -174,6 +178,8 @@ async function mount(
       heldActions: () => actions.heldActions(),
       status: () => (parent.dataset.gameStatus as ClimberGameStatus | undefined) ?? 'loading',
       fps: () => Math.round(booted.game.loop.actualFps),
+      setAutopilot: (enabled) => scene.setAutopilot(enabled),
+      dropToStart: () => scene.dropToStart(),
     };
     window.__teckinGame = hooks;
     cleanups.push(() => {

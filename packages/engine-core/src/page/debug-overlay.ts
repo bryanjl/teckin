@@ -9,13 +9,14 @@ export function attachDebugOverlay(parent: HTMLElement, readLines: () => string[
   panel.dataset.testid = 'debug-overlay';
   Object.assign(panel.style, {
     position: 'absolute',
-    top: 'calc(env(safe-area-inset-top, 0px) + 8px)',
+    // Below the centred HUD and its "Back to checkpoint" button, which reach about 140 px.
+    top: 'calc(env(safe-area-inset-top, 0px) + 148px)',
     left: 'calc(env(safe-area-inset-left, 0px) + 8px)',
     margin: '0',
     padding: '6px 8px',
-    font: '12px/1.35 ui-monospace, monospace',
+    font: '11px/1.3 ui-monospace, monospace',
     color: '#e2e8f0',
-    background: 'rgba(2, 6, 23, 0.7)',
+    background: 'rgba(2, 6, 23, 0.6)',
     borderRadius: '6px',
     pointerEvents: 'none',
     zIndex: '20',
