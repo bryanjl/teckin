@@ -82,6 +82,12 @@ export interface RoomServices {
    * host's sets from the database.
    */
   loadQuestionSet: (questionSetId: string) => QuestionSet | Promise<QuestionSet>;
+  /**
+   * Messages a connection may send per second before it is dropped. Players send about ten
+   * position reports and a few spend batches a second; 60 leaves room for bursts. Tests that
+   * fast-forward a game raise it.
+   */
+  maxMessagesPerSecond: number;
 }
 
 /** Serves the bundled sample question sets by id. */
@@ -100,6 +106,7 @@ export const roomServices: RoomServices = {
   reconnectSeconds: 180,
   now: () => Date.now(),
   loadQuestionSet: loadSampleQuestionSet,
+  maxMessagesPerSecond: 60,
 };
 
 /** Sets process-wide room services (recorder, nickname check, reconnect window). */
@@ -113,11 +120,6 @@ export type RoomClientData = { role: 'host' } | { role: 'player'; playerId: stri
 const tickIntervalMs = 250;
 /** Join codes outlive the room a little, so a code is never reused mid-game after a slow tick. */
 const joinCodeTtlSeconds = 30 * 60;
-/**
- * Messages a connection may send per second before Colyseus drops it. Players send about
- * ten position reports and a few spend batches a second; this leaves room for bursts.
- */
-const maxMessagesPerSecond = 60;
 /** An ended game stays open this long so everyone can read the results. */
 const endedRoomLingerMs = 10 * 60_000;
 /** A game with nobody connected (host included) is closed after this long. */
@@ -166,7 +168,7 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
     this.hostKeyHash = options.hostKeyHash;
     this.questionSetId = options.questionSetId;
     this.autoDispose = false;
-    this.maxMessagesPerSecond = maxMessagesPerSecond;
+    this.maxMessagesPerSecond = roomServices.maxMessagesPerSecond;
     // Room cap plus a few seats for host screens (laptop and projector).
     this.maxClients = settings.maxPlayers + 4;
     this.liveGame = new LiveGame(

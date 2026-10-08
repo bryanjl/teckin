@@ -112,6 +112,15 @@ export class CourseProgress {
     return checkpoint !== undefined && footY > checkpoint.respawnY + margin;
   }
 
+  /**
+   * Sets how many goals were reached, for a device that rejoins a game in progress. Goals
+   * can only be restored in order, so this never skips one the server has not counted.
+   */
+  restore(goalsReached: number, bestFootY: number = Number.POSITIVE_INFINITY): void {
+    this.reached = Math.max(0, Math.min(this.goals.length, Math.floor(goalsReached)));
+    this.bestY = Math.min(this.bestY, bestFootY);
+  }
+
   /** Forgets all progress, for "Play again". */
   reset(): void {
     this.reached = 0;

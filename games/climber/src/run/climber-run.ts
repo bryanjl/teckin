@@ -166,7 +166,8 @@ export class ClimberRun {
     this.placeAt(this.course.spawn.x, this.course.spawn.y);
   }
 
-  private placeAt(footX: number, footY: number): void {
+  /** Puts the player's feet at a point, standing still (a checkpoint, or a server correction). */
+  placeAt(footX: number, footY: number): void {
     this.body = this.spawnBody(footX, footY);
     this.previousBody = this.body;
     this.jumpsUsed = 0;

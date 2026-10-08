@@ -32,9 +32,15 @@ importers:
       '@colyseus/ws-transport':
         specifier: 0.18.4
         version: 0.18.4(@colyseus/core@0.18.18)(express@5.2.1)
+      '@teckin/climber':
+        specifier: workspace:*
+        version: link:../../games/climber
       '@teckin/game-contracts':
         specifier: workspace:*
         version: link:../../packages/game-contracts
+      '@teckin/questions':
+        specifier: workspace:*
+        version: link:../../packages/questions
       '@teckin/room-core':
         specifier: workspace:*
         version: link:../../packages/room-core
@@ -136,6 +142,12 @@ importers:
 
   games/climber:
     dependencies:
+      '@colyseus/core':
+        specifier: 0.18.18
+        version: 0.18.18(@colyseus/better-call@1.3.3(zod@4.6.5))(@colyseus/schema@5.0.36(typescript@6.0.3))(@colyseus/ws-transport@0.18.4)(@pm2/io@6.1.0)(express@5.2.1)(zod@4.6.5)
+      '@colyseus/schema':
+        specifier: 5.0.36
+        version: 5.0.36(typescript@6.0.3)
       '@teckin/engine-core':
         specifier: workspace:*
         version: link:../../packages/engine-core
@@ -145,6 +157,9 @@ importers:
       '@teckin/platformer-kit':
         specifier: workspace:*
         version: link:../../packages/platformer-kit
+      '@teckin/room-core':
+        specifier: workspace:*
+        version: link:../../packages/room-core
       phaser:
         specifier: 4.2.1
         version: 4.2.1
@@ -152,6 +167,12 @@ importers:
         specifier: 4.6.5
         version: 4.6.5
     devDependencies:
+      '@colyseus/sdk':
+        specifier: 0.18.5
+        version: 0.18.5(@colyseus/core@0.18.18)(typescript@6.0.3)(zod@4.6.5)
+      '@colyseus/testing':
+        specifier: 0.18.6
+        version: 0.18.6(@colyseus/core@0.18.18)(@colyseus/sdk@0.18.5(@colyseus/core@0.18.18)(typescript@6.0.3)(zod@4.6.5))(@colyseus/tools@0.18.9(@colyseus/core@0.18.18)(@colyseus/ws-transport@0.18.4))
       '@teckin/config':
         specifier: workspace:*
         version: link:../../packages/config

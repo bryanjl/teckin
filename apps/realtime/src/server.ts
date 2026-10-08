@@ -11,8 +11,9 @@ import {
 } from '@colyseus/core';
 import { WebSocketTransport } from '@colyseus/ws-transport';
 import { roomSettingsSchema } from '@teckin/game-contracts';
+import { ClimberRoom, climberSettingsSchema } from '@teckin/climber/server';
 import {
-  BaseGameRoom,
+  type BaseGameRoom,
   configureRoomServices,
   createJoinCodeRegistry,
   hashSecret,
@@ -20,6 +21,7 @@ import {
   joinCodePattern,
   type SessionRecorder,
 } from '@teckin/room-core';
+import { sampleQuestionSetIds } from '@teckin/questions';
 import { z } from 'zod';
 import { createRateLimiter } from './rate-limiter';
 
@@ -51,13 +53,15 @@ export interface RealtimeServer {
 
 /** Room names the server registers, one per game plug-in. */
 export const roomNames = {
-  // The climber's own room (server-side energy and movement checks) replaces this in M3.2.
   climber: 'climber',
 } as const;
 
 const createGameBodySchema = z.object({
   gameId: z.enum([roomNames.climber]),
   settings: roomSettingsSchema.partial().default({}),
+  /** One of the bundled sample sets until Phase 4 brings hosts' own sets. */
+  questionSetId: z.enum(sampleQuestionSetIds).default('maths'),
+  gameSettings: climberSettingsSchema.partial().default({}),
 });
 
 /**
@@ -112,6 +116,8 @@ export function createRealtimeServer(options: RealtimeServerOptions = {}): Realt
       gameId: body.data.gameId,
       hostKeyHash: hashSecret(hostKey),
       settings: roomSettingsSchema.parse(body.data.settings),
+      questionSetId: body.data.questionSetId,
+      gameSettings: climberSettingsSchema.parse(body.data.gameSettings),
     });
     const created = matchMaker.getLocalRoomById(room.roomId) as BaseGameRoom | undefined;
     const joinCode = created ? (created.state.joinCode as string) : '';
@@ -120,7 +126,7 @@ export function createRealtimeServer(options: RealtimeServerOptions = {}): Realt
 
   const httpServer = createServer();
   const gameServer = defineServer({
-    rooms: { [roomNames.climber]: defineRoom(BaseGameRoom) },
+    rooms: { [roomNames.climber]: defineRoom(ClimberRoom) },
     routes: createRouter({ health, lookupJoinCode, createDevGame }),
     transport: new WebSocketTransport({ server: httpServer }),
     ...(options.presence ? { presence: options.presence } : {}),

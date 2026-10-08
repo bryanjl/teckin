@@ -53,6 +53,17 @@ describe('CourseProgress', () => {
     expect(progress.finished).toBe(true);
   });
 
+  it('restores goals reached for a device rejoining a game, within the course', () => {
+    const progress = new CourseProgress([goal(500), goal(200)], true);
+    progress.restore(1, 480);
+    expect(progress.goalsReached).toBe(1);
+    expect(progress.bestFootY).toBe(480);
+    expect(progress.checkpoint?.respawnY).toBe(532);
+    expect(progress.update(at(200), true)).toEqual({ reachedGoal: 1, finished: true });
+    progress.restore(9);
+    expect(progress.goalsReached).toBe(2);
+  });
+
   it('tracks the best height reached', () => {
     const progress = new CourseProgress([goal(0)], false);
     progress.update(at(400), false);
