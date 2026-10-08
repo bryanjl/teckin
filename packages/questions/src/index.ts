@@ -23,3 +23,32 @@ export {
   sampleQuestionSets,
   type SampleQuestionSetId,
 } from './sample-sets';
+export {
+  authoredQuestionSchema,
+  authoredQuestionSetSchema,
+  checkAuthoredQuestionSet,
+  findQuestionProblems,
+  questionAuthoringLimits,
+  questionSetReadiness,
+  trueFalseOptions,
+  trueFalseOptionTexts,
+  type AuthoredOption,
+  type AuthoredQuestion,
+  type AuthoredQuestionSet,
+  type CheckedQuestionSet,
+  type QuestionProblem,
+  type QuestionProblemField,
+  type QuestionSetProblem,
+  type QuestionSetReadiness,
+} from './authoring';
+export { csvCell, parseCsv, toCsv, unguardCsvCell } from './csv';
+export {
+  importQuestionsFromCsv,
+  maximumQuestionCsvBytes,
+  questionCsvExamples,
+  questionCsvHeaders,
+  questionCsvTemplate,
+  questionsToCsv,
+  type CsvRowProblem,
+  type QuestionCsvImport,
+} from './question-csv';
