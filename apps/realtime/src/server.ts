@@ -158,10 +158,16 @@ export function createRealtimeServer(options: RealtimeServerOptions = {}): Realt
   return { gameServer, httpServer, recorder };
 }
 
-/** The caller's address for rate limiting: the first forwarded hop when behind a proxy. */
-function clientAddress(request: Request | undefined): string {
+/**
+ * The caller's address for rate limiting. Behind Container Apps' ingress (or any one proxy)
+ * the proxy appends the address it saw to `X-Forwarded-For`, so the last entry is the one to
+ * trust; earlier entries are whatever the caller sent and could be changed on every request
+ * to dodge the limit.
+ */
+export function clientAddress(request: Request | undefined): string {
   const forwarded = request?.headers.get('x-forwarded-for');
-  return forwarded?.split(',')[0]?.trim() || request?.headers.get('x-real-ip') || 'unknown';
+  const nearest = forwarded?.split(',').at(-1)?.trim();
+  return nearest || request?.headers.get('x-real-ip') || 'unknown';
 }
 
 /** Compares two secrets in constant time (hashed first so lengths never leak). */

@@ -3,7 +3,7 @@ import type { ColyseusTestServer } from '@colyseus/testing';
 import { bootTestServer } from '@teckin/room-core/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createRateLimiter } from './rate-limiter';
-import { createRealtimeServer, roomNames } from './server';
+import { clientAddress, createRealtimeServer, roomNames } from './server';
 
 const devGameSecret = 'test-secret-0123456789';
 
@@ -102,6 +102,25 @@ describe('realtime server', () => {
       await lookup('123456');
     }
     expect((await lookup('123456')).status).toBe(429);
+    // A made-up first hop does not buy a fresh allowance.
+    const spoofed = await fetch(`${baseUrl}/join-codes/123456`, {
+      headers: { 'x-forwarded-for': '192.0.2.77, 10.0.0.2' },
+    });
+    expect(spoofed.status).toBe(429);
+  });
+});
+
+describe('clientAddress', () => {
+  const withHeaders = (headers: Record<string, string>) =>
+    new Request('http://realtime.test/join-codes/123456', { headers });
+
+  it('trusts the address the nearest proxy appended, not ones the caller made up', () => {
+    expect(clientAddress(withHeaders({ 'x-forwarded-for': '203.0.113.9' }))).toBe('203.0.113.9');
+    expect(clientAddress(withHeaders({ 'x-forwarded-for': '1.2.3.4, 203.0.113.9' }))).toBe(
+      '203.0.113.9',
+    );
+    expect(clientAddress(withHeaders({ 'x-real-ip': '198.51.100.7' }))).toBe('198.51.100.7');
+    expect(clientAddress(withHeaders({}))).toBe('unknown');
   });
 });
 
