@@ -303,6 +303,7 @@ export function QuestionSheet({
           <span
             key={gainKey}
             data-testid="energy-gain"
+            data-motion={reduced ? 'reduced' : 'full'}
             aria-hidden="true"
             style={{
               position: 'absolute',

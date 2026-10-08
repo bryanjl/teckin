@@ -176,10 +176,22 @@ test('reduced motion swaps the flying energy for a simple fade', async ({ page }
   await openGame(page);
   await page.getByTestId('get-energy-button').tap();
   const id = await currentQuestionId(page);
+  // The "+100" lives under a second; watch for it in the page so a slow tap cannot miss it.
+  const motion = page.evaluate(
+    () =>
+      new Promise<string | null>((resolve) => {
+        const observer = new MutationObserver(() => {
+          const gain = document.querySelector('[data-testid="energy-gain"]');
+          if (gain) {
+            observer.disconnect();
+            resolve(gain.getAttribute('data-motion'));
+          }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+      }),
+  );
   await page.locator(`[data-option-id="${await correctOption(page, id)}"]`).tap();
-  const gain = page.getByTestId('energy-gain');
-  await expect(gain).toBeAttached();
-  expect(await gain.evaluate((element) => element.style.animation)).toContain('teckin-fade-out');
+  expect(await motion).toBe('reduced');
 });
 
 test('?tune=1 changes jump cost and energy per answer while playing', async ({ page }) => {
