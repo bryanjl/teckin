@@ -65,6 +65,7 @@ export function SoloGame() {
       ...(flags.debug === '1'
         ? { debugCorrectOptionFor: (questionId: string) => session.correctOptionFor(questionId) }
         : {}),
+      ...(flags.tune === '1' ? { tuning: session } : {}),
     };
     setShell(gameShell);
 

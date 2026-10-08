@@ -32,7 +32,7 @@ describe('a full solo run', () => {
           return asked % 5 === 0 ? wrong : correct;
         },
         secondsPerAnswer: 6,
-        askBelow: 40,
+        askBelow: tunables.jumpCost + tunables.doubleJumpCost + 10,
         refillTo: 200,
       });
       expect(result.finished).toBe(true);

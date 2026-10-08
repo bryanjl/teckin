@@ -25,8 +25,8 @@ export default [
     },
   },
   {
-    // Tests may build a real LocalSession to drive the game end to end.
-    files: ['**/*.test.ts'],
+    // Tests and playtest scripts may build a real LocalSession to drive the game end to end.
+    files: ['**/*.test.ts', 'scripts/**/*.ts'],
     rules: { 'no-restricted-imports': 'off' },
   },
 ];

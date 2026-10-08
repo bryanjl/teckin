@@ -107,7 +107,11 @@ export class CourseBot {
       }
       const target = this.target;
       if (!target) return this.remember(buttons);
-      if (this.hazards?.shouldWait?.(body, target)) return this.remember(buttons);
+      if (this.hazards?.shouldWait?.(body, target)) {
+        // Hold position on the ledge while waiting (a vent may be pushing).
+        this.steerTowardTarget(foot.x, standing, buttons, true);
+        return this.remember(buttons);
+      }
       // A moving ledge (or a ledge reached from one) is only worth jumping for while the two
       // overlap; until then, wait where we are and let the platform come round.
       if ((target.moving || standing.moving) && !this.overlapsColumns(standing, target)) {
@@ -135,7 +139,10 @@ export class CourseBot {
     const targetTop = target.row * size;
     const aboveTarget = foot.y <= targetTop;
     this.steerTowardTarget(foot.x, target, buttons, aboveTarget);
-    const needsHeight = foot.y > targetTop - size * 0.5;
+    // Air jump only when the first jump will not clear the target ledge with room to spare,
+    // never while already dropping onto it from above.
+    const descendingOntoTarget = body.velocityY >= 0 && foot.y <= targetTop;
+    const needsHeight = foot.y > targetTop - size * 0.2 && !descendingOntoTarget;
     const canAirJump = body.airJumpsUsed < this.tuning.airJumps;
     if (body.velocityY < -60) {
       buttons.jump = this.jumpWasDown;

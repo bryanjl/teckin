@@ -176,3 +176,24 @@ test('reduced motion swaps the flying energy for a simple fade', async ({ page }
   await expect(gain).toBeAttached();
   expect(await gain.evaluate((element) => element.style.animation)).toContain('teckin-fade-out');
 });
+
+test('?tune=1 changes jump cost and energy per answer while playing', async ({ page }) => {
+  await openGame(page, '?debug=1&tune=1');
+  await page.getByTestId('tuning-toggle').tap();
+  await expect(page.getByTestId('tuning-panel')).toBeVisible();
+  await page.getByTestId('tune-jump-cost').fill('5');
+  await expect(page.getByTestId('tune-value-jump-cost')).toHaveText('5');
+  await page.getByTestId('tune-energy-per-answer').fill('300');
+  await page.getByTestId('tuning-toggle').tap();
+
+  await page.keyboard.press('Space');
+  await expect.poll(() => energy(page)).toBe(45);
+  await expect
+    .poll(() => page.evaluate(() => window.__teckinGame?.player().onGround), { timeout: 4_000 })
+    .toBe(true);
+  const before = await energy(page);
+  await page.getByTestId('get-energy-button').tap();
+  const id = await currentQuestionId(page);
+  await page.locator(`[data-option-id="${await correctOption(page, id)}"]`).tap();
+  await expect.poll(() => energy(page)).toBe(before + 300);
+});

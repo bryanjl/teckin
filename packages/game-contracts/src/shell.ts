@@ -70,4 +70,12 @@ export interface ClientGameShell {
    * can answer through the real sheet. Absent in normal play and in networked games.
    */
   debugCorrectOptionFor?: (questionId: string) => string;
+  /**
+   * Solo balance tuning (`?tune=1`) only: live control of the session's reward per correct
+   * answer. Absent in normal play.
+   */
+  tuning?: {
+    readonly energyPerCorrectAnswer: number;
+    setEnergyPerCorrectAnswer(value: number): void;
+  };
 }

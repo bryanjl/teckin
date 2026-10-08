@@ -180,6 +180,12 @@ export class HazardField {
     return isZoneOn(spec, this.time);
   }
 
+  /** True when an active vent is pushing a box of the given size at `body`'s position. */
+  isPushed(body: Pick<PlatformerBody, 'x' | 'y'>, tuning: PlatformerTuning): boolean {
+    const box: Box = { x: body.x, y: body.y, width: tuning.bodyWidth, height: tuning.bodyHeight };
+    return this.layout.vents.some((vent) => this.isOn(vent) && overlaps(box, vent.zone));
+  }
+
   /** Moving platforms as ledges with fractional columns, for the course bot. */
   dynamicLedges(): Ledge[] {
     const size = this.grid.tileSize;

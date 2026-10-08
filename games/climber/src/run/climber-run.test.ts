@@ -82,12 +82,16 @@ describe('ClimberRun energy', () => {
 
   it('describes the limits for each energy level', () => {
     expect(energyLimits(0, tunables)).toMatchObject({ crawling: true, groundJumpAllowed: false });
-    expect(energyLimits(10, tunables)).toMatchObject({
+    expect(energyLimits(tunables.jumpCost, tunables)).toMatchObject({
       crawling: false,
       groundJumpAllowed: true,
       airJumpAllowed: false,
       speedScale: 1,
     });
-    expect(energyLimits(15, tunables)).toMatchObject({ airJumpAllowed: true });
+    expect(energyLimits(tunables.doubleJumpCost, tunables)).toMatchObject({ airJumpAllowed: true });
+    expect(energyLimits(tunables.jumpCost - 1, tunables)).toMatchObject({
+      crawling: false,
+      groundJumpAllowed: false,
+    });
   });
 });

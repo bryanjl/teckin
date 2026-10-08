@@ -18,12 +18,12 @@ describe('climber settings', () => {
     expect(climberSettingsSchema.safeParse({ summitGoal: 7 }).success).toBe(false);
   });
 
-  it('keeps tunables at the spec starting values', () => {
+  it('keeps the tunables chosen by the Phase 2 playtests (docs/playtests.md)', () => {
     expect(defaultClimberTunables).toMatchObject({
       startingEnergy: 50,
-      jumpCost: 10,
-      doubleJumpCost: 15,
-      walkingCostPerTile: 1,
+      jumpCost: 20,
+      doubleJumpCost: 26,
+      walkingCostPerTile: 2,
     });
   });
 });

@@ -2,7 +2,7 @@ import type { GameSession, PresentedQuestion } from '@teckin/game-contracts';
 import type { ClimberCourse } from '../course/course';
 import type { ClimberTunables } from '../tunables';
 import { createClimberBot } from './climber-bot';
-import { ClimberRun } from './climber-run';
+import { ClimberRun, type RunStepResult } from './climber-run';
 
 /** Options for {@link simulateClimb}. */
 export interface SimulateClimbOptions {
@@ -23,6 +23,20 @@ export interface SimulateClimbOptions {
   refillTo: number;
   /** Give up after this much simulated time. */
   maxSimulatedSeconds?: number;
+  /**
+   * Seconds a person pauses after each landing before moving on. The bot reacts instantly;
+   * people do not, so playtests add this to model a human's climbing pace.
+   */
+  pauseAfterLandingSeconds?: number;
+  /**
+   * Chance (0–1) that a jump is fumbled: the button is let go at once (a short hop) and the
+   * double jump is missed, as people sometimes do. Needs `random`.
+   */
+  fumbleRate?: number;
+  /** Random source for fumbles; seed it for repeatable playtests. */
+  random?: () => number;
+  /** Called after every step, for tracing a playtest. */
+  onStep?: (run: ClimberRun, step: RunStepResult) => void;
 }
 
 /** Outcome of {@link simulateClimb}. */
@@ -87,9 +101,13 @@ export async function simulateClimb(options: SimulateClimbOptions): Promise<Simu
     crumbles: 0,
   };
   let jumpWasDown = false;
+  let pauseLeft = 0;
+  let fumbleLeft = 0;
+  const idle = { left: false, right: false, jumpHeld: false, jumpPressed: false };
 
   while (!run.completed && result.climbSeconds + result.answeringSeconds < maxSeconds) {
-    if (session.energy < options.askBelow) {
+    // Like a person, check the meter and top up while standing on a ledge.
+    if (session.energy < options.askBelow && run.body.onGround) {
       result.sheetVisits += 1;
       result.answeringSeconds += options.sheetOverheadSeconds ?? 2;
       while (session.energy < options.refillTo) {
@@ -100,16 +118,43 @@ export async function simulateClimb(options: SimulateClimbOptions): Promise<Simu
         if (outcome.isCorrect) result.correctAnswers += 1;
         else result.answeringSeconds += options.wrongAnswerSeconds ?? 2;
       }
-      jumpWasDown = false;
     }
-    const buttons = bot.decide(run.body);
-    const step = run.step({
-      left: buttons.left,
-      right: buttons.right,
-      jumpHeld: buttons.jump,
-      jumpPressed: buttons.jump && !jumpWasDown,
-    });
-    jumpWasDown = buttons.jump;
+    let step;
+    // A shaking ledge or a blast of steam gets a person moving at once.
+    const urgent =
+      run.hazards.crumblingStates().some((entry) => entry.state === 'shaking') ||
+      run.hazards.isPushed(run.body, physics);
+    if (pauseLeft > 0 && run.body.onGround && !urgent) {
+      pauseLeft -= physics.fixedStep;
+      step = run.step(idle);
+      jumpWasDown = false;
+    } else {
+      const buttons = bot.decide(run.body);
+      let jumpPressed = buttons.jump && !jumpWasDown;
+      if (
+        jumpPressed &&
+        run.body.onGround &&
+        fumbleLeft <= 0 &&
+        (options.random?.() ?? 1) < (options.fumbleRate ?? 0)
+      ) {
+        fumbleLeft = 0.5;
+      }
+      const fumbling = fumbleLeft > 0;
+      if (fumbling) {
+        fumbleLeft -= physics.fixedStep;
+        // Keep the first press (the ground jump) but let go at once and miss the double jump.
+        if (!run.body.onGround) jumpPressed = false;
+      }
+      step = run.step({
+        left: buttons.left,
+        right: buttons.right,
+        jumpHeld: buttons.jump && !fumbling,
+        jumpPressed,
+      });
+      jumpWasDown = buttons.jump;
+    }
+    options.onStep?.(run, step);
+    if (step.events.includes('land')) pauseLeft = options.pauseAfterLandingSeconds ?? 0;
     result.climbSeconds += physics.fixedStep;
     for (const event of step.events) {
       if (event === 'jump') result.jumps += 1;

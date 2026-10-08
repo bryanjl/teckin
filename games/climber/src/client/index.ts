@@ -19,7 +19,8 @@ import type {
   ShellAppearance,
 } from '@teckin/game-contracts';
 import { climberThemeRequirements, defaultClimberThemeId, resolveClimberThemeId } from '../theme';
-import { defaultClimberTunables } from '../tunables';
+import { defaultClimberTunables, type ClimberTunables } from '../tunables';
+import { attachTuningPanel } from './tuning-panel';
 import { bundledCourseMap, createClimberCourse } from '../course/course';
 import {
   CourseScene,
@@ -72,7 +73,11 @@ async function mount(
   const window = document.defaultView;
   if (!window) throw new Error('The Climber game needs a browser window');
   const debug = options.flags.debug === '1';
-  const tunables = defaultClimberTunables;
+  const tuning = options.flags.tune === '1';
+  // The tuning panel edits a live copy; normal play uses the frozen defaults.
+  const tunables: ClimberTunables = tuning
+    ? structuredClone(defaultClimberTunables)
+    : defaultClimberTunables;
   const course = createClimberCourse(bundledCourseMap, tunables);
 
   const setStatus = (status: ClimberGameStatus): void => {
@@ -181,6 +186,8 @@ async function mount(
             correctOptionFor: shell.debugCorrectOptionFor,
             energy: () => session.energy,
             refillTo: tunables.energyMeterFull,
+            // Enough for a jump, a double jump and a few tiles of walking.
+            askBelow: tunables.jumpCost + tunables.doubleJumpCost + 10,
           })
         : undefined;
     if (answerer) cleanups.push(answerer.stop);
@@ -296,6 +303,16 @@ async function mount(
       }),
     );
     cleanups.push(pauseWhenHidden(document, pauseController));
+    if (tuning) {
+      cleanups.push(
+        attachTuningPanel(parent, tunables, shell, {
+          accent: colour('accent'),
+          text: colour('text'),
+          panel: colour('panel'),
+          fontFamily,
+        }),
+      );
+    }
 
     if (debug) {
       const hooks: ClimberDebugHooks = {

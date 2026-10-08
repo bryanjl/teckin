@@ -15,7 +15,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "generate:course": "tsx scripts/generate-course.ts"
+    "generate:course": "tsx scripts/generate-course.ts",
+    "playtest": "tsx scripts/playtest.ts"
   },
   "dependencies": {
     "@teckin/engine-core": "workspace:*",

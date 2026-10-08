@@ -30,6 +30,7 @@ export interface LocalSessionOptions {
 export class LocalSession implements GameSession {
   private quiz: QuestionQuiz;
   private balance: number;
+  private reward: number;
   private readonly listeners = new Set<(change: EnergyChange) => void>();
   private readonly progressLog: ProgressEvent[] = [];
 
@@ -38,6 +39,18 @@ export class LocalSession implements GameSession {
     assertWholeNonNegative(options.energyPerCorrectAnswer, 'energyPerCorrectAnswer');
     this.quiz = this.createQuiz();
     this.balance = options.startingEnergy;
+    this.reward = options.energyPerCorrectAnswer;
+  }
+
+  /** Energy added per correct answer right now. */
+  get energyPerCorrectAnswer(): number {
+    return this.reward;
+  }
+
+  /** Changes the reward per correct answer mid-game (solo balance tuning only). */
+  setEnergyPerCorrectAnswer(value: number): void {
+    assertWholeNonNegative(value, 'energyPerCorrectAnswer');
+    this.reward = value;
   }
 
   get energy(): number {
@@ -50,7 +63,7 @@ export class LocalSession implements GameSession {
 
   async submitAnswer(questionId: string, chosenOptionId: string): Promise<AnswerOutcome> {
     const event = this.quiz.submitAnswer(questionId, chosenOptionId);
-    const energyGained = event.isCorrect ? this.options.energyPerCorrectAnswer : 0;
+    const energyGained = event.isCorrect ? this.reward : 0;
     if (energyGained > 0) this.change(energyGained, 'answer');
     return {
       questionId,
