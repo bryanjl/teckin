@@ -3,9 +3,10 @@ import type { ColyseusTestServer } from '@colyseus/testing';
 import { bootTestServer } from '@teckin/room-core/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { LoadMetricsReport } from './load-metrics';
-import { createRealtimeServer, roomNames } from './server';
+import { createRealtimeServer } from './server';
+import { launchTestGameOrThrow } from './test-launch';
 
-const devGameSecret = 'test-secret-load-metrics-01';
+const sharedSecret = 'realtime-shared-secret-load-metrics-0123456789';
 
 describe('load metrics route', () => {
   let colyseus: ColyseusTestServer;
@@ -16,19 +17,13 @@ describe('load metrics route', () => {
   });
 
   beforeAll(async () => {
-    const { gameServer } = createRealtimeServer({ devGameSecret, loadMetrics: true });
+    const { gameServer } = createRealtimeServer({ sharedSecret, loadMetrics: true });
     ({ colyseus, baseUrl } = await bootTestServer(gameServer));
   });
 
   it('reports room work, CPU and memory, and starts a new period on reset', async () => {
-    const created = (await (
-      await fetch(`${baseUrl}/dev/games`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-dev-game-secret': devGameSecret },
-        body: JSON.stringify({ gameId: roomNames.climber }),
-      })
-    ).json()) as { sessionId: string };
-    const player = await colyseus.sdk.joinById(created.sessionId, {
+    const launched = await launchTestGameOrThrow(baseUrl, sharedSecret);
+    const player = await colyseus.sdk.joinById(launched.roomId, {
       role: 'player',
       nickname: 'Ada',
       deviceKey: randomUUID(),
@@ -51,7 +46,7 @@ describe('load metrics route', () => {
   });
 
   it('is not served unless switched on', async () => {
-    const { gameServer } = createRealtimeServer({ devGameSecret });
+    const { gameServer } = createRealtimeServer({ sharedSecret });
     const routes = Object.keys(gameServer.router.endpoints);
     expect(routes).toContain('health');
     expect(routes).not.toContain('loadMetrics');

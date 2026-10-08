@@ -10,16 +10,6 @@ export interface PlayerRanking {
 }
 
 /**
- * Creates the server-side room for a game. The concrete room type comes from `room-core`
- * once the realtime server exists; until then the factory is typed loosely on purpose so
- * this package stays free of server dependencies.
- */
-export type RoomFactory<Settings, State> = (options: {
-  settings: Settings;
-  initialState: () => State;
-}) => unknown;
-
-/**
  * The page element a client game mounts into. Typed structurally rather than as `HTMLElement`
  * so server code can import this package without DOM types; any DOM element satisfies it.
  */
@@ -54,16 +44,22 @@ export interface ClientGameMountOptions {
 /**
  * The contract every game plug-in implements. Adding a game means implementing this and
  * registering it in the web and realtime apps; nothing else in the platform changes.
+ *
+ * The definition holds what both apps need. Each app pairs it with its own half, so neither
+ * app bundles the other's code: the realtime server with the game's room (`ServerGame` in
+ * `@teckin/room-core`), the web app with the lazily loaded client (`ClientGame`). See
+ * docs/DECISIONS.md.
  */
 export interface GameDefinition<Settings, State> {
   id: string;
   displayName: string;
-  /** Drives the host's auto-generated settings form and validates stored settings. */
+  /**
+   * Drives the host's auto-generated settings form (see `settingsFormFields`) and validates
+   * stored settings. A `z.object` whose every field has a default.
+   */
   settingsSchema: ZodType<Settings>;
   defaultSettings: Settings;
   supportsAssignments: boolean;
-  createServerRoom: RoomFactory<Settings, State>;
-  loadClientGame: () => Promise<ClientGameModule>;
   rankPlayers: (state: State) => PlayerRanking[];
   summarisePlayer: (state: State, playerId: string) => Record<string, number | string>;
 }
@@ -76,4 +72,11 @@ export function defineGame<Settings, State>(
   definition: GameDefinition<Settings, State>,
 ): GameDefinition<Settings, State> {
   return definition;
+}
+
+/** A game as the web app registers it: the definition plus its lazily loaded client. */
+export interface ClientGame<Settings = unknown, State = unknown> {
+  definition: GameDefinition<Settings, State>;
+  /** Loads the game's Phaser scenes; only the play pages call it. */
+  loadClientGame: () => Promise<ClientGameModule>;
 }

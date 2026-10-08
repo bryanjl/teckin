@@ -11,13 +11,13 @@ import {
   type WelcomeMessage,
 } from '@teckin/game-contracts';
 import { sampleQuestionSets } from '@teckin/questions';
+import { InMemorySessionRecorder, configureRoomServices, roomServices } from '@teckin/room-core';
 import {
-  InMemorySessionRecorder,
-  configureRoomServices,
-  hashSecret,
-  roomServices,
-} from '@teckin/room-core';
-import { bootTestServer } from '@teckin/room-core/testing';
+  acceptTestHostPasses,
+  bootTestServer,
+  testHostJoinOptions,
+  testOrganisationId,
+} from '@teckin/room-core/testing';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { NetworkBot } from '../../scripts/network-bot';
 import { bundledCourseMap, createClimberCourse } from '../course/course';
@@ -31,7 +31,6 @@ import {
 import { defaultClimberTunables } from '../tunables';
 import { ClimberRoom, type ClimberRoomState } from './climber-room';
 
-const hostKey = 'host-key-for-climber-tests-01';
 const tunables = defaultClimberTunables;
 const course = createClimberCourse(bundledCourseMap, tunables);
 const questionSet = sampleQuestionSets.maths;
@@ -61,14 +60,18 @@ async function waitFor(check: () => boolean, what: string, timeoutMs = 5_000): P
   }
 }
 
-async function createGame(gameSettings: Record<string, unknown> = {}) {
+async function createGame(
+  gameSettings: Record<string, unknown> = {},
+  launched: { questionSet?: unknown } = {},
+) {
   const room = await colyseus.createRoom<ClimberRoom>('climber', {
     gameId: 'climber',
-    hostKeyHash: hashSecret(hostKey),
+    organisationId: testOrganisationId,
     questionSetId: 'maths',
     gameSettings,
+    ...launched,
   });
-  const host = (await colyseus.connectTo(room, { role: 'host', hostKey })) as SdkRoom<
+  const host = (await colyseus.connectTo(room, testHostJoinOptions(room.roomId))) as SdkRoom<
     unknown,
     ClimberRoomState
   >;
@@ -113,6 +116,7 @@ beforeEach(() => {
     // The tests fast-forward play, sending far more than ten reports a real second.
     maxMessagesPerSecond: Number.POSITIVE_INFINITY,
   });
+  acceptTestHostPasses();
 });
 afterEach(async () => {
   await colyseus.cleanup();
@@ -366,6 +370,29 @@ describe('ClimberRoom', () => {
     await sleep(100);
     expect(room.state.climbers.get(bot.playerId)!.heightMetres).toBe(heightAtEnd);
   }, 30_000);
+
+  it('asks the questions of the set the game was launched with', async () => {
+    const launchedSet = {
+      id: 'host-set',
+      title: 'Capitals',
+      questions: [
+        {
+          id: '0199c3f2-6a51-7c11-9a43-111111111111',
+          type: 'trueFalse',
+          prompt: 'Paris is the capital of France.',
+          options: [
+            { id: '0199c3f2-6a51-7c11-9a43-222222222222', text: 'True', isCorrect: true },
+            { id: '0199c3f2-6a51-7c11-9a43-333333333333', text: 'False', isCorrect: false },
+          ],
+        },
+      ],
+    };
+    const { room, host } = await createGame({}, { questionSet: launchedSet });
+    const player = await joinPlayer(room, 'Dee');
+    await startGame(room, host);
+    const question = (await player.request(sessionRequestTypes.question)) as { prompt: string };
+    expect(question.prompt).toBe('Paris is the capital of France.');
+  });
 
   it("shares the host's checkpoints setting with every device", async () => {
     const off = await createGame();

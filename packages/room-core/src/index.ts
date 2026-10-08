@@ -5,3 +5,5 @@ export * from './room-state';
 export * from './room-work-meter';
 export * from './session-recorder';
 export * from './question-sessions';
+export * from './realtime-trust';
+export * from './server-game';

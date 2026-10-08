@@ -9,14 +9,19 @@ import {
   type WelcomeMessage,
 } from '@teckin/game-contracts';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { BaseGameRoom, configureRoomServices, hashSecret, roomServices } from './base-game-room';
+import { BaseGameRoom, configureRoomServices, roomServices } from './base-game-room';
 import { createJoinCodeRegistry } from './join-codes';
 import { RoomStateBase } from './room-state';
 import { RoomWorkStats } from './room-work-meter';
 import { InMemorySessionRecorder } from './session-recorder';
-import { bootTestServer } from './testing';
+import { issueHostPass } from './realtime-trust';
+import {
+  acceptTestHostPasses,
+  bootTestServer,
+  testHostJoinOptions,
+  testOrganisationId,
+} from './testing';
 
-const hostKey = 'host-key-for-tests-0123456789';
 const recorder = new InMemorySessionRecorder();
 let fakeNowMs = 1_000_000;
 
@@ -25,7 +30,7 @@ const server = defineServer({ rooms: { game: defineRoom(BaseGameRoom) }, greet: 
 async function createGame(settings: Record<string, unknown> = {}) {
   return colyseus.createRoom<BaseGameRoom>('game', {
     gameId: 'test-game',
-    hostKeyHash: hashSecret(hostKey),
+    organisationId: testOrganisationId,
     settings,
   });
 }
@@ -57,6 +62,7 @@ afterAll(async () => {
 });
 beforeEach(() => {
   configureRoomServices({ recorder, now: () => fakeNowMs, reconnectSeconds: 180, joinCodes: null });
+  acceptTestHostPasses();
 });
 afterEach(async () => {
   await colyseus.cleanup();
@@ -88,23 +94,46 @@ describe('BaseGameRoom', () => {
     const registry = createJoinCodeRegistry(matchMaker.presence);
     expect(await registry.lookup(room.state.joinCode)).toBe(room.roomId);
 
-    const host = await colyseus.connectTo(room, { role: 'host', hostKey });
+    const host = await colyseus.connectTo(room, testHostJoinOptions(room.roomId));
     host.send(hostMessageTypes.end, {});
     await room.waitForMessage(hostMessageTypes.end);
     expect(room.state.phase).toBe('ended');
     expect(await registry.lookup(room.state.joinCode)).toBeNull();
   });
 
-  it('admits players into the roster and rejects a wrong host key', async () => {
+  it('admits players into the roster and refuses hosts without a valid pass for this room and organisation', async () => {
     const room = await createGame();
     const alice = await colyseus.connectTo(room, playerOptions('Alice'));
     const welcome = await whoAmI(alice);
     expect(welcome).toMatchObject({ nickname: 'Alice', resumed: false });
     await room.waitForNextPatch();
     expect([...room.state.players.values()].map((player) => player.nickname)).toEqual(['Alice']);
-    await expect(
-      colyseus.connectTo(room, { role: 'host', hostKey: 'wrong-key-wrong-key-1' }),
-    ).rejects.toThrow('wrongHostKey');
+    const otherRoom = await createGame();
+    const refusedOptions = [
+      // Another organisation's host.
+      testHostJoinOptions(room.roomId, 'another-organisation'),
+      // A genuine pass for a different room.
+      testHostJoinOptions(otherRoom.roomId),
+      // A pass signed with the wrong secret.
+      {
+        role: 'host' as const,
+        hostPass: issueHostPass('not-the-shared-secret-0123456789abcdef', {
+          roomId: room.roomId,
+          organisationId: testOrganisationId,
+          userId: 'intruder',
+        }),
+      },
+      { role: 'host' as const, hostPass: 'not-a-pass-at-all-0123456789' },
+    ];
+    for (const options of refusedOptions) {
+      await expect(colyseus.connectTo(room, options)).rejects.toThrow('hostNotAllowed');
+    }
+    configureRoomServices({ verifyHostPass: null });
+    await expect(colyseus.connectTo(room, testHostJoinOptions(room.roomId))).rejects.toThrow(
+      'hostNotAllowed',
+    );
+    acceptTestHostPasses();
+    await colyseus.connectTo(room, testHostJoinOptions(room.roomId));
     expect(recorder.events(room.roomId).map((event) => event.type)).toEqual([
       'sessionStarted',
       'playerJoined',
@@ -113,7 +142,7 @@ describe('BaseGameRoom', () => {
 
   it('refuses duplicate and invalid nicknames, a locked lobby and a full room', async () => {
     const room = await createGame({ maxPlayers: 2 });
-    const host = await colyseus.connectTo(room, { role: 'host', hostKey });
+    const host = await colyseus.connectTo(room, testHostJoinOptions(room.roomId));
     await colyseus.connectTo(room, playerOptions('Alice'));
     await expect(colyseus.connectTo(room, playerOptions('alice'))).rejects.toThrow('nicknameTaken');
     await expect(colyseus.connectTo(room, playerOptions('<script>'))).rejects.toThrow(
@@ -131,7 +160,7 @@ describe('BaseGameRoom', () => {
 
   it('ignores host commands from players and rejects malformed ones', async () => {
     const room = await createGame();
-    const host = await colyseus.connectTo(room, { role: 'host', hostKey });
+    const host = await colyseus.connectTo(room, testHostJoinOptions(room.roomId));
     const player = await colyseus.connectTo(room, playerOptions('Alice'));
     player.send(hostMessageTypes.start, {});
     await room.waitForMessage(hostMessageTypes.start);
@@ -163,7 +192,7 @@ describe('BaseGameRoom', () => {
 
   it('runs lobby, countdown, playing and ended on the server clock, with added time', async () => {
     const room = await createGame({ durationMinutes: 5 });
-    const host = await colyseus.connectTo(room, { role: 'host', hostKey });
+    const host = await colyseus.connectTo(room, testHostJoinOptions(room.roomId));
     host.send(hostMessageTypes.start, {});
     await room.waitForMessage(hostMessageTypes.start);
     expect(room.state.phase).toBe('countdown');
@@ -185,7 +214,7 @@ describe('BaseGameRoom', () => {
 
   it('closes late join when the host turned it off', async () => {
     const room = await createGame({ allowLateJoin: false });
-    const host = await colyseus.connectTo(room, { role: 'host', hostKey });
+    const host = await colyseus.connectTo(room, testHostJoinOptions(room.roomId));
     host.send(hostMessageTypes.start, {});
     await room.waitForMessage(hostMessageTypes.start);
     await expect(colyseus.connectTo(room, playerOptions('Late'))).rejects.toThrow('lateJoinClosed');
@@ -229,7 +258,7 @@ describe('BaseGameRoom', () => {
 
   it('kicks a player, keeps their device out, and lets them back when the host allows it', async () => {
     const room = await createGame();
-    const host = await colyseus.connectTo(room, { role: 'host', hostKey });
+    const host = await colyseus.connectTo(room, testHostJoinOptions(room.roomId));
     const deviceKey = randomUUID();
     const player = await colyseus.connectTo(room, playerOptions('Mallory', deviceKey));
     const welcome = await whoAmI(player);
@@ -254,7 +283,7 @@ describe('BaseGameRoom', () => {
 
   it('renames a player for everyone', async () => {
     const room = await createGame();
-    const host = await colyseus.connectTo(room, { role: 'host', hostKey });
+    const host = await colyseus.connectTo(room, testHostJoinOptions(room.roomId));
     const player = await colyseus.connectTo(room, playerOptions('Rude Name'));
     const welcome = await whoAmI(player);
     host.send(hostMessageTypes.rename, { playerId: welcome.playerId, nickname: 'Blue Fox' });

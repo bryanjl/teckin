@@ -11,8 +11,6 @@ describe('defineGame', () => {
       settingsSchema,
       defaultSettings: { rounds: 3 },
       supportsAssignments: false,
-      createServerRoom: () => null,
-      loadClientGame: async () => ({ mount: async () => () => undefined }),
       rankPlayers: () => [],
       summarisePlayer: () => ({}),
     });

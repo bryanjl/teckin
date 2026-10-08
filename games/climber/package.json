@@ -11,7 +11,8 @@
     "./maps/course.json": "./maps/course.json",
     "./server": "./src/server/index.ts",
     "./protocol": "./src/protocol.ts",
-    "./network-bot": "./scripts/network-bot.ts"
+    "./network-bot": "./scripts/network-bot.ts",
+    "./client-game": "./src/client-game.ts"
   },
   "scripts": {
     "build": "tsx scripts/build-art.ts",

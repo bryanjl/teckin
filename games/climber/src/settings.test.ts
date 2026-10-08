@@ -6,7 +6,6 @@ describe('climber settings', () => {
   it('defaults to the spec values', () => {
     expect(defaultClimberSettings).toEqual({
       energyPerCorrectAnswer: 100,
-      gameDurationMinutes: 15,
       checkpointsEnabled: false,
       summitGoal: 6,
     });
@@ -14,7 +13,6 @@ describe('climber settings', () => {
 
   it('rejects values outside the spec ranges', () => {
     expect(climberSettingsSchema.safeParse({ energyPerCorrectAnswer: 10 }).success).toBe(false);
-    expect(climberSettingsSchema.safeParse({ gameDurationMinutes: 61 }).success).toBe(false);
     expect(climberSettingsSchema.safeParse({ summitGoal: 7 }).success).toBe(false);
   });
 

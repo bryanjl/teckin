@@ -1,4 +1,5 @@
-import { isThemeId, type ThemeRequirements } from '@teckin/engine-core';
+// The DOM-free theme module, so server code (the realtime app) can import the game's ranking.
+import { isThemeId, type ThemeRequirements } from '@teckin/engine-core/theme';
 
 /** Theme used when none is chosen. */
 export const defaultClimberThemeId = 'cogspire';

@@ -1,14 +1,25 @@
 import { randomUUID } from 'node:crypto';
 import type { ColyseusTestServer } from '@colyseus/testing';
+import { roomSettingsSchema } from '@teckin/game-contracts';
+import { sampleQuestionSets } from '@teckin/questions';
+import { issueHostPass } from '@teckin/room-core/realtime-trust';
 import { bootTestServer } from '@teckin/room-core/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createRateLimiter } from './rate-limiter';
-import { clientAddress, createRealtimeServer, roomNames } from './server';
+import { clientAddress, createRealtimeServer } from './server';
+import { launchTestGame, launchTestGameOrThrow, testLaunchOrganisationId } from './test-launch';
 
-const devGameSecret = 'test-secret-0123456789';
+const sharedSecret = 'realtime-shared-secret-for-tests-0123456789';
+
+function hostOptions(roomId: string, organisationId = testLaunchOrganisationId) {
+  return {
+    role: 'host' as const,
+    hostPass: issueHostPass(sharedSecret, { roomId, organisationId, userId: 'host-user' }),
+  };
+}
 
 describe('realtime server', () => {
-  const { gameServer } = createRealtimeServer({ devGameSecret, joinLookupsPerMinute: 5 });
+  const { gameServer } = createRealtimeServer({ sharedSecret, joinLookupsPerMinute: 5 });
   let colyseus: ColyseusTestServer;
   let baseUrl = '';
 
@@ -20,41 +31,39 @@ describe('realtime server', () => {
     await colyseus.shutdown();
   });
 
-  async function createGame(secret = devGameSecret) {
-    return fetch(`${baseUrl}/dev/games`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-dev-game-secret': secret },
-      body: JSON.stringify({ gameId: roomNames.climber, settings: { durationMinutes: 10 } }),
-    });
-  }
-
   it('reports healthy', async () => {
     const response = await fetch(`${baseUrl}/health`);
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: 'ok' });
   });
 
-  it('refuses to create a game without the dev secret', async () => {
-    expect((await createGame('wrong')).status).toBe(403);
+  it('refuses launches not signed with the shared secret', async () => {
+    const forged = await launchTestGame(baseUrl, 'not-the-shared-secret-0123456789abcdef');
+    expect(forged.status).toBe(403);
+    const unsigned = await fetch(`${baseUrl}/games`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ gameId: 'climber' }),
+    });
+    expect(unsigned.status).toBe(403);
   });
 
-  it('accepts the dev secret in the body, as the browser page sends it', async () => {
-    const send = (secret: string) =>
-      fetch(`${baseUrl}/dev/games`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', origin: 'http://localhost:3000' },
-        body: JSON.stringify({ gameId: roomNames.climber, secret, questionSetId: 'spelling' }),
-      });
-    expect((await send('wrong-secret')).status).toBe(403);
-    const response = await send(devGameSecret);
-    expect(response.status).toBe(201);
-    expect(response.headers.get('access-control-allow-origin')).toBe('http://localhost:3000');
+  it('refuses unknown games and settings outside the game schema', async () => {
+    expect((await launchTestGame(baseUrl, sharedSecret, { gameId: 'chess' })).status).toBe(400);
+    const badSettings = await launchTestGame(baseUrl, sharedSecret, {
+      gameSettings: { energyPerCorrectAnswer: 1 },
+    });
+    expect(badSettings.status).toBe(400);
+  });
+
+  it('refuses to start with a shared secret too short to be safe', () => {
+    expect(() => createRealtimeServer({ sharedSecret: 'short' })).toThrow(/REALTIME_SHARED_SECRET/);
   });
 
   it('refuses nicknames the profanity filter catches', async () => {
-    const created = (await (await createGame()).json()) as { sessionId: string };
+    const launched = await launchTestGameOrThrow(baseUrl, sharedSecret);
     await expect(
-      colyseus.sdk.joinById(created.sessionId, {
+      colyseus.sdk.joinById(launched.roomId, {
         role: 'player',
         nickname: 'Sh1t Head',
         deviceKey: randomUUID(),
@@ -62,26 +71,23 @@ describe('realtime server', () => {
     ).rejects.toThrow(/nicknameInvalid/);
   });
 
-  it('creates a game whose join code resolves to the room that players and the host can join', async () => {
-    const response = await createGame();
-    expect(response.status).toBe(201);
-    const created = (await response.json()) as {
-      sessionId: string;
-      joinCode: string;
-      hostKey: string;
-    };
-    expect(created.joinCode).toMatch(/^\d{6}$/);
+  it("launches a game whose code resolves to the room; only the owning organisation's hosts can control it", async () => {
+    const launched = await launchTestGameOrThrow(baseUrl, sharedSecret, {
+      settings: roomSettingsSchema.parse({ durationMinutes: 10 }),
+      questionSet: sampleQuestionSets.spelling,
+    });
+    expect(launched.joinCode).toMatch(/^\d{6}$/);
 
-    const lookup = await fetch(`${baseUrl}/join-codes/${created.joinCode}`, {
+    const lookup = await fetch(`${baseUrl}/join-codes/${launched.joinCode}`, {
       headers: { 'x-forwarded-for': '10.0.0.1' },
     });
-    expect(await lookup.json()).toEqual({ roomId: created.sessionId });
+    expect(await lookup.json()).toEqual({ roomId: launched.roomId });
 
-    const host = await colyseus.sdk.joinById(created.sessionId, {
-      role: 'host',
-      hostKey: created.hostKey,
-    });
-    const player = await colyseus.sdk.joinById(created.sessionId, {
+    await expect(
+      colyseus.sdk.joinById(launched.roomId, hostOptions(launched.roomId, 'another-organisation')),
+    ).rejects.toThrow(/hostNotAllowed/);
+    const host = await colyseus.sdk.joinById(launched.roomId, hostOptions(launched.roomId));
+    const player = await colyseus.sdk.joinById(launched.roomId, {
       role: 'player',
       nickname: 'Robo',
       deviceKey: randomUUID(),

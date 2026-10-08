@@ -22,7 +22,12 @@ import {
   type SessionRefusal,
   type WelcomeMessage,
 } from '@teckin/game-contracts';
-import { isSampleQuestionSetId, sampleQuestionSets, type QuestionSet } from '@teckin/questions';
+import {
+  isSampleQuestionSetId,
+  questionSetSchema,
+  sampleQuestionSets,
+  type QuestionSet,
+} from '@teckin/questions';
 import { z } from 'zod';
 import { createJoinCodeRegistry, type JoinCodeRegistry } from './join-codes';
 import {
@@ -39,10 +44,11 @@ import {
   type EnergyRules,
 } from './question-sessions';
 import { RosterPlayer, RoomStateBase } from './room-state';
+import type { HostPassClaims } from './realtime-trust';
 import type { RoomWorkMeter } from './room-work-meter';
 import type { SessionRecorder } from './session-recorder';
 
-/** Hashes a secret (host key or device key) so rooms never hold the raw value. */
+/** Hashes a secret (a device key) so rooms never hold the raw value. */
 export function hashSecret(secret: string): string {
   return createHash('sha256').update(secret).digest('hex');
 }
@@ -51,8 +57,13 @@ export function hashSecret(secret: string): string {
 export const gameRoomCreateOptionsSchema = z.object({
   /** Game plug-in id, for example "climber". */
   gameId: z.string().min(1),
-  /** SHA-256 of the host key; the raw key goes only to the host. */
-  hostKeyHash: z.string().regex(/^[0-9a-f]{64}$/),
+  /**
+   * The organisation that owns the game. Host screens join with a pass for this room and this
+   * organisation (see {@link RoomServices.verifyHostPass}).
+   */
+  organisationId: z.string().min(1).max(64),
+  /** The game's record in the web app's database, for the session recorder. */
+  gameSessionId: z.string().min(1).max(64).optional(),
   settings: roomSettingsSchema.default({
     maxPlayers: 60,
     allowLateJoin: true,
@@ -60,7 +71,13 @@ export const gameRoomCreateOptionsSchema = z.object({
   }),
   /** The game's own settings, validated by the game's room. */
   gameSettings: z.unknown().optional(),
-  /** Question set players answer; resolved by {@link RoomServices.loadQuestionSet}. */
+  /**
+   * The questions players answer, copied from the host's set when the game launched. Without
+   * it, {@link RoomServices.loadQuestionSet} resolves `questionSetId` (bundled sample sets,
+   * used by tests and the load test).
+   */
+  questionSet: questionSetSchema.optional(),
+  /** A bundled sample set, used only when `questionSet` is not given. */
   questionSetId: z.string().min(1).max(64).default('maths'),
 });
 
@@ -91,6 +108,11 @@ export interface RoomServices {
   maxMessagesPerSecond: number;
   /** Measures each room's work per state patch (load tests, metrics). Off when null. */
   workMeter: RoomWorkMeter | null;
+  /**
+   * Checks a host pass and returns its claims, or `null` when it is not genuine or has
+   * expired. The realtime app sets it from the shared secret; without it no host can join.
+   */
+  verifyHostPass: ((pass: string) => HostPassClaims | null) | null;
 }
 
 /** Serves the bundled sample question sets by id. */
@@ -111,6 +133,7 @@ export const roomServices: RoomServices = {
   loadQuestionSet: loadSampleQuestionSet,
   maxMessagesPerSecond: 60,
   workMeter: null,
+  verifyHostPass: null,
 };
 
 /** Sets process-wide room services (recorder, nickname check, reconnect window). */
@@ -152,7 +175,10 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
   /** Players' questions and energy, once the game called {@link enableQuestionSessions}. */
   protected questionSessions: QuestionSessions | null = null;
   private questionSetId = '';
-  private hostKeyHash = '';
+  private launchedQuestionSet: QuestionSet | undefined;
+  private organisationId = '';
+  /** The game's record in the web app's database, when it was launched from there. */
+  protected gameSessionId: string | undefined;
   private joinCodes!: JoinCodeRegistry;
   private readonly sessionIdByPlayerId = new Map<string, string>();
   private readonly resumedSessionIds = new Set<string>();
@@ -174,8 +200,10 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
     const options = gameRoomCreateOptionsSchema.parse(rawOptions);
     const settings: RoomSettings = options.settings;
     this.gameId = options.gameId;
-    this.hostKeyHash = options.hostKeyHash;
+    this.organisationId = options.organisationId;
+    this.gameSessionId = options.gameSessionId;
     this.questionSetId = options.questionSetId;
+    this.launchedQuestionSet = options.questionSet;
     this.autoDispose = false;
     this.maxMessagesPerSecond = roomServices.maxMessagesPerSecond;
     if (roomServices.workMeter) this.meterMessages(roomServices.workMeter);
@@ -215,15 +243,23 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
     await this.onGameCreated(options);
   }
 
-  /** Checks the options and the host key; player admission happens in `onJoin`. */
+  /**
+   * Checks the options and, for a host, the host pass: it must be genuine, unexpired, for this
+   * room and for the organisation that owns the game. Player admission happens in `onJoin`.
+   */
   override onAuth(_client: Client, rawOptions: unknown): { role: 'host' | 'player' } {
     const parsed = roomJoinOptionsSchema.safeParse(rawOptions);
     if (!parsed.success) {
       throw new JoinRefused('invalidOptions');
     }
     if (parsed.data.role === 'host') {
-      if (hashSecret(parsed.data.hostKey) !== this.hostKeyHash) {
-        throw new JoinRefused('wrongHostKey');
+      const claims = roomServices.verifyHostPass?.(parsed.data.hostPass) ?? null;
+      if (
+        !claims ||
+        claims.roomId !== this.roomId ||
+        claims.organisationId !== this.organisationId
+      ) {
+        throw new JoinRefused('hostNotAllowed');
       }
       return { role: 'host' };
     }
@@ -329,7 +365,8 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
    * from {@link onGameCreated}.
    */
   protected async enableQuestionSessions(rules: EnergyRules): Promise<void> {
-    const questionSet = await roomServices.loadQuestionSet(this.questionSetId);
+    const questionSet =
+      this.launchedQuestionSet ?? (await roomServices.loadQuestionSet(this.questionSetId));
     this.questionSessions = new QuestionSessions(questionSet, rules, this.roomId, () => this.now());
     this.onMessage(sessionRequestTypes.question, (client: Client) => this.handleQuestion(client));
     this.onMessage(sessionRequestTypes.answer, (client: Client, message: unknown) =>

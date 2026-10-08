@@ -3,10 +3,12 @@ import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { Client, type Room as SdkRoom } from '@colyseus/sdk';
+import type { LaunchedGame } from '@teckin/game-contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { launchTestGameOrThrow } from './test-launch';
 
 const redisUrl = process.env.REDIS_URL;
-const devGameSecret = 'test-secret-multi-process-01';
+const sharedSecret = 'realtime-shared-secret-multi-process-0123456789';
 const realtimeFolder = fileURLToPath(new URL('..', import.meta.url));
 
 async function freePort(): Promise<number> {
@@ -29,7 +31,7 @@ async function startProcess(port: number): Promise<ChildProcess> {
       REALTIME_PORT: String(port),
       REALTIME_HOST: '127.0.0.1',
       REALTIME_PUBLIC_ADDRESS: `127.0.0.1:${port}`,
-      DEV_GAME_SECRET: devGameSecret,
+      REALTIME_SHARED_SECRET: sharedSecret,
       REDIS_URL: redisUrl,
     },
     stdio: 'ignore',
@@ -79,17 +81,11 @@ describe.runIf(redisUrl)('several realtime processes on shared Redis', () => {
   it('spreads games over the processes; a code and a join through either reach the right one', async () => {
     const [firstPort, secondPort] = ports as [number, number];
     const entry = `http://127.0.0.1:${firstPort}`;
-    const created: { sessionId: string; joinCode: string }[] = [];
+    const created: LaunchedGame[] = [];
     // Colyseus creates each room on the process with the fewest rooms. Processes publish
     // their room counts at most once a second, so games made in one burst can bunch up.
     for (let index = 0; index < 4; index += 1) {
-      const response = await fetch(`${entry}/dev/games`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ gameId: 'climber', secret: devGameSecret }),
-      });
-      expect(response.status).toBe(201);
-      created.push((await response.json()) as { sessionId: string; joinCode: string });
+      created.push(await launchTestGameOrThrow(entry, sharedSecret));
       await new Promise((resolve) => setTimeout(resolve, 1_100));
     }
     for (const game of created) expect(game.joinCode).toMatch(/^[1-9]\d{5}$/);
@@ -101,8 +97,8 @@ describe.runIf(redisUrl)('several realtime processes on shared Redis', () => {
       const lookup = (await (
         await fetch(`http://127.0.0.1:${lookupPort}/join-codes/${game.joinCode}`)
       ).json()) as { roomId: string };
-      expect(lookup.roomId).toBe(game.sessionId);
-      const room = await new Client(`http://127.0.0.1:${lookupPort}`).joinById(game.sessionId, {
+      expect(lookup.roomId).toBe(game.roomId);
+      const room = await new Client(`http://127.0.0.1:${lookupPort}`).joinById(game.roomId, {
         role: 'player',
         nickname: `Player ${index}`,
         deviceKey: randomUUID(),

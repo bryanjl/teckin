@@ -59,7 +59,11 @@ export const playerJoinOptionsSchema = z.object({
 /** Options a host screen sends when joining a room. */
 export const hostJoinOptionsSchema = z.object({
   role: z.literal('host'),
-  hostKey: z.string().min(16).max(128),
+  /**
+   * A short-lived pass the web app signs for a signed-in host whose organisation owns the
+   * game. Only valid for this room.
+   */
+  hostPass: z.string().min(16).max(1024),
 });
 
 /** Join options for any room. */
@@ -74,12 +78,27 @@ export type RoomJoinOptions = z.infer<typeof roomJoinOptionsSchema>;
 
 /** Room settings every game shares, set by the host when the game is created. */
 export const roomSettingsSchema = z.object({
-  /** Most players allowed in the room. */
-  maxPlayers: z.number().int().min(1).max(200).default(60),
-  /** Whether players may join after the game has started. */
-  allowLateJoin: z.boolean().default(true),
   /** Game length in minutes. */
-  durationMinutes: z.number().int().min(5).max(60).default(15),
+  durationMinutes: z
+    .number()
+    .int()
+    .min(5)
+    .max(60)
+    .default(15)
+    .meta({ title: 'Game length', unit: 'minutes' }),
+  /** Most players allowed in the room. */
+  maxPlayers: z
+    .number()
+    .int()
+    .min(1)
+    .max(200)
+    .default(60)
+    .meta({ title: 'Most players', unit: 'players' }),
+  /** Whether players may join after the game has started. */
+  allowLateJoin: z.boolean().default(true).meta({
+    title: 'Players can join after the start',
+    description: 'When off, only players who joined in the lobby can play.',
+  }),
 });
 
 export type RoomSettings = z.infer<typeof roomSettingsSchema>;
@@ -149,7 +168,7 @@ export const roomCloseCodes = {
 /** Why a join was refused; sent as the join error's message so clients can explain it. */
 export type JoinRefusal =
   | 'invalidOptions'
-  | 'wrongHostKey'
+  | 'hostNotAllowed'
   | 'gameEnded'
   | 'lateJoinClosed'
   | 'locked'

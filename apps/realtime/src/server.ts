@@ -1,4 +1,3 @@
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer, type Server as HttpServer } from 'node:http';
 import {
   createEndpoint,
@@ -10,30 +9,37 @@ import {
   type Server,
 } from '@colyseus/core';
 import { WebSocketTransport } from '@colyseus/ws-transport';
-import { roomSettingsSchema } from '@teckin/game-contracts';
-import { ClimberRoom, climberSettingsSchema } from '@teckin/climber/server';
+import {
+  launchGamePath,
+  launchGamePurpose,
+  launchGameRequestSchema,
+  type LaunchedGame,
+} from '@teckin/game-contracts';
 import {
   configureRoomServices,
   createJoinCodeRegistry,
-  hashSecret,
   InMemorySessionRecorder,
   joinCodePattern,
   RoomWorkStats,
   type SessionRecorder,
 } from '@teckin/room-core';
+import {
+  assertSharedSecret,
+  verifyHostPass,
+  verifySignedRequest,
+} from '@teckin/room-core/realtime-trust';
 import { checkNickname } from '@teckin/nicknames';
-import { sampleQuestionSetIds } from '@teckin/questions';
-import { z } from 'zod';
+import { serverGameFor, serverGames } from './games';
 import { createLoadMetrics } from './load-metrics';
 import { createRateLimiter } from './rate-limiter';
 
 /** Settings the realtime server reads from the environment. */
 export interface RealtimeServerOptions {
   /**
-   * Secret the temporary `/dev/new-game` page sends to create games. Without it, game
-   * creation over HTTP is switched off. Phase 4 replaces this with signed-in hosts.
+   * The secret shared with the web app (`REALTIME_SHARED_SECRET`, at least 32 characters). It
+   * checks launch requests and host passes; without it no game can be launched or hosted.
    */
-  devGameSecret?: string;
+  sharedSecret?: string;
   /** Shared presence (Redis) for several processes; local presence when omitted. */
   presence?: Presence;
   /** Shared matchmaker driver (Redis) for several processes; local when omitted. */
@@ -58,35 +64,24 @@ export interface RealtimeServer {
   recorder: SessionRecorder;
 }
 
-/** Room names the server registers, one per game plug-in. */
-export const roomNames = {
-  climber: 'climber',
-} as const;
-
-const createGameBodySchema = z.object({
-  /**
-   * The dev game secret, in the body because browsers only send custom headers after a CORS
-   * preflight that Colyseus' default CORS headers do not allow. The header still works.
-   */
-  secret: z.string().max(256).optional(),
-  gameId: z.enum([roomNames.climber]),
-  settings: roomSettingsSchema.partial().default({}),
-  /** One of the bundled sample sets until Phase 4 brings hosts' own sets. */
-  questionSetId: z.enum(sampleQuestionSetIds).default('maths'),
-  gameSettings: climberSettingsSchema.partial().default({}),
-});
-
 /**
  * Creates the Colyseus realtime server with its HTTP routes:
  *
  * - `GET /health` for deploy probes;
  * - `GET /join-codes/:code` resolves a 6-digit code to a room id, rate-limited per address;
- * - `POST /dev/games` creates a game for the temporary `/dev/new-game` page.
+ * - `POST /games` launches a game for the web app (a request signed with the shared secret).
  */
 export function createRealtimeServer(options: RealtimeServerOptions = {}): RealtimeServer {
   const recorder = options.recorder ?? new InMemorySessionRecorder();
   const workStats = options.loadMetrics ? new RoomWorkStats() : null;
-  configureRoomServices({ recorder, checkNickname, workMeter: workStats });
+  const sharedSecret = options.sharedSecret;
+  if (sharedSecret !== undefined) assertSharedSecret(sharedSecret);
+  configureRoomServices({
+    recorder,
+    checkNickname,
+    workMeter: workStats,
+    verifyHostPass: sharedSecret ? (pass) => verifyHostPass(sharedSecret, pass) : null,
+  });
   const allowLookup = createRateLimiter({
     limit: options.joinLookupsPerMinute ?? 30,
     windowMs: 60_000,
@@ -114,39 +109,43 @@ export function createRealtimeServer(options: RealtimeServerOptions = {}): Realt
     return Response.json({ roomId });
   });
 
-  const createDevGame = createEndpoint('/dev/games', { method: 'POST' }, async (ctx) => {
-    const secret = options.devGameSecret;
-    const body = createGameBodySchema.safeParse(ctx.body ?? {});
-    const sentSecret =
-      ctx.request?.headers.get('x-dev-game-secret') ??
-      (body.success ? body.data.secret : undefined);
-    if (!secret || !sentSecret || !secretsMatch(sentSecret, secret)) {
+  const launchGame = createEndpoint(launchGamePath, { method: 'POST' }, async (ctx) => {
+    const body = sharedSecret
+      ? verifySignedRequest(sharedSecret, launchGamePurpose, ctx.body ?? null)
+      : null;
+    if (!body) {
       return Response.json({ error: 'forbidden' }, { status: 403 });
     }
-    if (!body.success) {
+    const request = launchGameRequestSchema.safeParse(body);
+    const game = request.success ? serverGameFor(request.data.gameId) : undefined;
+    const gameSettings = game?.definition.settingsSchema.safeParse(request.data?.gameSettings);
+    if (!request.success || !game || !gameSettings?.success) {
       return Response.json({ error: 'invalidBody' }, { status: 400 });
     }
-    const hostKey = randomBytes(24).toString('base64url');
-    const room = await matchMaker.createRoom(body.data.gameId, {
-      gameId: body.data.gameId,
-      hostKeyHash: hashSecret(hostKey),
-      settings: roomSettingsSchema.parse(body.data.settings),
-      questionSetId: body.data.questionSetId,
-      gameSettings: climberSettingsSchema.parse(body.data.gameSettings),
+    const room = await matchMaker.createRoom(game.definition.id, {
+      gameId: game.definition.id,
+      gameSessionId: request.data.gameSessionId,
+      organisationId: request.data.organisationId,
+      settings: request.data.settings,
+      gameSettings: gameSettings.data,
+      questionSet: request.data.questionSet,
     });
     // With several processes the room may live on another one; its listing carries the code.
     const metadata = room.metadata as { joinCode?: unknown } | undefined;
     const joinCode = typeof metadata?.joinCode === 'string' ? metadata.joinCode : '';
-    return Response.json({ sessionId: room.roomId, joinCode, hostKey }, { status: 201 });
+    const launched: LaunchedGame = { roomId: room.roomId, joinCode };
+    return Response.json(launched, { status: 201 });
   });
 
   const httpServer = createServer();
   const gameServer = defineServer({
-    rooms: { [roomNames.climber]: defineRoom(ClimberRoom) },
+    rooms: Object.fromEntries(
+      serverGames.map((game) => [game.definition.id, defineRoom(game.room)]),
+    ),
     routes: createRouter({
       health,
       lookupJoinCode,
-      createDevGame,
+      launchGame,
       ...(workStats ? { loadMetrics: createLoadMetrics(workStats) } : {}),
     }),
     transport: new WebSocketTransport({ server: httpServer }),
@@ -168,10 +167,4 @@ export function clientAddress(request: Request | undefined): string {
   const forwarded = request?.headers.get('x-forwarded-for');
   const nearest = forwarded?.split(',').at(-1)?.trim();
   return nearest || request?.headers.get('x-real-ip') || 'unknown';
-}
-
-/** Compares two secrets in constant time (hashed first so lengths never leak). */
-function secretsMatch(sent: string, expected: string): boolean {
-  const digest = (value: string) => createHash('sha256').update(value).digest();
-  return timingSafeEqual(digest(sent), digest(expected));
 }

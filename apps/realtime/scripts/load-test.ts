@@ -21,9 +21,11 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { Client, type Room as SdkRoom } from '@colyseus/sdk';
 import { NetworkBot } from '@teckin/climber/network-bot';
-import { hostMessageTypes } from '@teckin/game-contracts';
+import { hostMessageTypes, roomSettingsSchema } from '@teckin/game-contracts';
 import { sampleQuestionSets } from '@teckin/questions';
+import { issueHostPass } from '@teckin/room-core/realtime-trust';
 import type { LoadMetricsReport } from '../src/load-metrics';
+import { launchTestGameOrThrow, testLaunchOrganisationId } from '../src/test-launch';
 
 interface Scenario {
   name: string;
@@ -111,7 +113,7 @@ async function main(): Promise<void> {
 
 /** Starts a realtime process with load metrics on and waits for its health check. */
 async function startServer(port: number) {
-  const secret = randomBytes(18).toString('base64url');
+  const secret = randomBytes(33).toString('base64url');
   const realtimeFolder = fileURLToPath(new URL('..', import.meta.url));
   const child: ChildProcess = spawn(process.execPath, ['--import', 'tsx', 'src/main.ts'], {
     cwd: realtimeFolder,
@@ -119,7 +121,7 @@ async function startServer(port: number) {
       ...process.env,
       REALTIME_PORT: String(port),
       REALTIME_HOST: '127.0.0.1',
-      DEV_GAME_SECRET: secret,
+      REALTIME_SHARED_SECRET: secret,
       REALTIME_LOAD_METRICS: '1',
       REDIS_URL: '',
       NODE_ENV: 'production',
@@ -157,25 +159,26 @@ async function runScenario(scenario: Scenario, serverUrl: string, secret: string
   const bots: LoadBot[] = [];
 
   for (let roomIndex = 0; roomIndex < scenario.rooms; roomIndex += 1) {
-    const response = await fetch(`${serverUrl}/dev/games`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        secret,
-        gameId: 'climber',
-        settings: { maxPlayers: Math.max(60, scenario.botsPerRoom), durationMinutes: 30 },
-        questionSetId: 'maths',
+    const game = await launchTestGameOrThrow(serverUrl, secret, {
+      settings: roomSettingsSchema.parse({
+        maxPlayers: Math.max(60, scenario.botsPerRoom),
+        durationMinutes: 30,
       }),
     });
-    if (response.status !== 201) throw new Error(`Creating a game failed: ${response.status}`);
-    const game = (await response.json()) as { sessionId: string; hostKey: string };
-    const host = await client.joinById(game.sessionId, { role: 'host', hostKey: game.hostKey });
+    const host = await client.joinById(game.roomId, {
+      role: 'host',
+      hostPass: issueHostPass(secret, {
+        roomId: game.roomId,
+        organisationId: testLaunchOrganisationId,
+        userId: 'load-test-host',
+      }),
+    });
     hosts.push(host);
     // Join in small batches, as a class arriving does, rather than all in one instant.
     for (let first = 0; first < scenario.botsPerRoom; first += 10) {
       const batch = Array.from(
         { length: Math.min(10, scenario.botsPerRoom - first) },
-        (_, offset) => joinBot(client, game.sessionId, `Bot ${first + offset + 1}`),
+        (_, offset) => joinBot(client, game.roomId, `Bot ${first + offset + 1}`),
       );
       bots.push(...(await Promise.all(batch)));
     }

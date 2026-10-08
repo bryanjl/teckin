@@ -9,7 +9,7 @@ const redisUrl = process.env.REDIS_URL?.trim();
 // Without REDIS_URL the server runs as a single process with in-memory presence, which is
 // all local development needs. Several processes must share Redis for join codes and rooms.
 const { gameServer } = createRealtimeServer({
-  devGameSecret: process.env.DEV_GAME_SECRET?.trim() || undefined,
+  sharedSecret: process.env.REALTIME_SHARED_SECRET?.trim() || undefined,
   publicAddress: process.env.REALTIME_PUBLIC_ADDRESS?.trim() || undefined,
   loadMetrics: process.env.REALTIME_LOAD_METRICS === '1',
   ...(redisUrl ? { presence: new RedisPresence(redisUrl), driver: new RedisDriver(redisUrl) } : {}),

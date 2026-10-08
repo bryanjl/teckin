@@ -7,7 +7,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./phaser": "./src/phaser/index.ts",
-    "./art": "./src/art/index.ts"
+    "./art": "./src/art/index.ts",
+    "./theme": "./src/theme/theme-manifest.ts"
   },
   "scripts": {
     "lint": "eslint .",
