@@ -130,6 +130,11 @@ export function QuestionSetEditor(props: QuestionSetEditorProps) {
         kind: 'problem',
         message: 'This set no longer exists. It may have been deleted.',
       });
+    } else if (result.reason === 'planLimit') {
+      setStatus({
+        kind: 'problem',
+        message: `Your plan allows ${result.limit} question sets. Delete one to save this set.`,
+      });
     } else if (result.reason === 'invalid') {
       setShowAllProblems(true);
       const first = result.problems[0];

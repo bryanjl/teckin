@@ -25,4 +25,9 @@ export const climberGame = defineGame<ClimberSettings, ClimberRoomStateView>({
   supportsAssignments: false,
   rankPlayers: rankClimberPlayers,
   summarisePlayer: summariseClimber,
+  // Keys of the stats ClimberRoom records with each result.
+  reportColumns: [
+    { key: 'bestHeightMetres', label: 'Best height', unit: 'm' },
+    { key: 'summitsReached', label: 'Summits' },
+  ],
 });

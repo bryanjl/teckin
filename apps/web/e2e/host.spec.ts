@@ -217,6 +217,13 @@ test.describe('host live screen', () => {
     await projector.goto(`/host/${gameSessionId}`);
     await expect(projector.getByTestId('host-results')).toBeVisible({ timeout: 10_000 });
     expect(await order(projector)).toEqual(hostOrder);
+
+    // The realtime server recorded the game, so it has a report with the final ranking.
+    await projector.goto(`/dashboard/games/${gameSessionId}`);
+    await expect(projector.getByTestId('report-live')).toHaveCount(0);
+    await expect(projector.getByTestId('report-player').first()).toContainText('1. Ada');
+    await projector.goto('/dashboard/games');
+    await expect(projector.getByTestId('past-game')).toHaveCount(1);
   });
 
   test('answers 404 for a game that does not exist', async ({ page }) => {

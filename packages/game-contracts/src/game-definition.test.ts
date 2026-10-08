@@ -13,6 +13,7 @@ describe('defineGame', () => {
       supportsAssignments: false,
       rankPlayers: () => [],
       summarisePlayer: () => ({}),
+      reportColumns: [],
     });
 
     expect(definition.id).toBe('example');

@@ -1,17 +1,19 @@
 'use server';
 
-import { RecordNotFoundError, StaleEditError } from '@teckin/db';
+import { checkPlanAllows, RecordNotFoundError, StaleEditError } from '@teckin/db';
 import { checkAuthoredQuestionSet, type QuestionSetProblem } from '@teckin/questions';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireHost } from '../../../lib/server/host';
+import { planLimits } from '../../../lib/server/platform';
 import { copyTitle } from './editor-model';
 
 /** What a save tells the editor. */
 export type SaveQuestionSetResult =
   | { ok: true; questionSetId: string; updatedAt: string }
   | { ok: false; reason: 'invalid'; problems: QuestionSetProblem[] }
-  | { ok: false; reason: 'stale' | 'missing' };
+  | { ok: false; reason: 'stale' | 'missing' }
+  | { ok: false; reason: 'planLimit'; limit: number };
 
 function isUuid(value: unknown): value is string {
   return typeof value === 'string' && /^[0-9a-f-]{36}$/i.test(value);
@@ -25,6 +27,8 @@ export async function createQuestionSet(content: unknown): Promise<SaveQuestionS
   const host = await requireHost('/dashboard/sets/new');
   const checked = checkAuthoredQuestionSet(content);
   if (!checked.ok) return { ok: false, reason: 'invalid', problems: checked.problems };
+  const plan = await checkPlanAllows(host.data, planLimits, 'questionSets');
+  if (!plan.allowed) return { ok: false, reason: 'planLimit', limit: plan.limit };
   const created = await host.data.questionSets.create({
     title: checked.set.title,
     description: checked.set.description,
@@ -71,6 +75,10 @@ export async function duplicateQuestionSet(questionSetId: unknown): Promise<void
   const host = await requireHost('/dashboard');
   const original = await host.data.questionSets.get(questionSetId);
   if (!original) redirect('/dashboard');
+  // The editor has no room for a message here; billing will add one when limits are real.
+  if (!(await checkPlanAllows(host.data, planLimits, 'questionSets')).allowed) {
+    redirect(`/dashboard/sets/${questionSetId}`);
+  }
   const copy = await host.data.questionSets.duplicate(questionSetId, {
     title: copyTitle(original.title),
     createdById: host.userId,

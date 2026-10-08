@@ -28,6 +28,7 @@ import {
   type ClimberPlacement,
   type Correction,
 } from '../protocol';
+import { climberGame } from '../definition';
 import { defaultClimberTunables } from '../tunables';
 import { ClimberRoom, type ClimberRoomState } from './climber-room';
 
@@ -168,6 +169,12 @@ describe('ClimberRoom', () => {
     const events = recorder.events(room.roomId);
     const results = events.filter((event) => event.type === 'result');
     expect(results.map((event) => event.type === 'result' && event.rank)).toEqual([1, 2, 3]);
+    // Every column the report shows is in what the room records.
+    for (const event of results) {
+      if (event.type !== 'result') continue;
+      for (const column of climberGame.reportColumns)
+        expect(event.stats).toHaveProperty(column.key);
+    }
     // The recorder also saw every answer and every summit along the way.
     const answersOf = (playerId: string) =>
       events.filter((event) => event.type === 'answer' && event.playerId === playerId).length;

@@ -62,6 +62,21 @@ export interface GameDefinition<Settings, State> {
   supportsAssignments: boolean;
   rankPlayers: (state: State) => PlayerRanking[];
   summarisePlayer: (state: State, playerId: string) => Record<string, number | string>;
+  /**
+   * The game's own figures a report shows beside each player's rank and accuracy, read from
+   * the stats the game recorded with each result. In display order.
+   */
+  reportColumns: readonly ReportColumn[];
+}
+
+/** One game-specific column in a game report and its CSV export. */
+export interface ReportColumn {
+  /** Key in the result's recorded stats. */
+  key: string;
+  /** Column heading, e.g. "Best height". */
+  label: string;
+  /** Appended to numbers on screen (not in CSV), e.g. "m". */
+  unit?: string;
 }
 
 /**

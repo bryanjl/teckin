@@ -70,13 +70,20 @@ async function logLink(
  * offers an SMTP relay); local runs print the link to the server log and, for end-to-end tests,
  * also drop it in a mailbox folder.
  */
-export function magicLinkProvider(delivery: MagicLinkDelivery): EmailConfig {
+export function magicLinkProvider(
+  delivery: MagicLinkDelivery,
+  /** Rate limit on emails per address; a refusal sends nothing and fails the sign-in. */
+  allowSend: (email: string) => Promise<boolean> = async () => true,
+): EmailConfig {
   return {
     id: emailProviderId,
     type: 'email',
     name: 'Email',
     maxAge: magicLinkLifetimeSeconds,
     async sendVerificationRequest({ identifier, url, expires }) {
+      if (!(await allowSend(identifier))) {
+        throw new Error('Too many sign-in emails for this address; try again later.');
+      }
       if (delivery.kind === 'smtp') {
         await sendBySmtp(delivery, identifier, url);
       } else {

@@ -1,7 +1,9 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { signIn, signOut } from '../auth';
+import { allowSignInEmail, allowSignInFromAddress, requestAddress } from '../lib/server/platform';
 import { readAuthEnvironment } from './auth-environment';
 import { emailProviderId } from './magic-link';
 import { safeReturnPath } from './return-path';
@@ -16,7 +18,10 @@ function backToSignIn(error: string, returnPath: string): never {
   redirect(`/sign-in?error=${error}&callbackUrl=${encodeURIComponent(returnPath)}`);
 }
 
-/** Sends a magic link to the address in the form, then shows "check your email". */
+/**
+ * Sends a magic link to the address in the form, then shows "check your email". Rate-limited
+ * per network address and per email address (see `signInRateLimits`).
+ */
 export async function signInWithEmail(formData: FormData): Promise<void> {
   const returnPath = safeReturnPath(formData.get('callbackUrl'));
   const email = String(formData.get('email') ?? '').trim();
@@ -24,6 +29,10 @@ export async function signInWithEmail(formData: FormData): Promise<void> {
     backToSignIn('InvalidEmail', returnPath);
   }
   if (!readAuthEnvironment().magicLinks) backToSignIn('EmailUnavailable', returnPath);
+  const address = requestAddress(await headers());
+  if (!(await allowSignInFromAddress(address)) || !(await allowSignInEmail(email, 'form'))) {
+    backToSignIn('TooManyAttempts', returnPath);
+  }
   // Auth.js would redirect through /api/auth/verify-request, which leaves that address in the
   // browser; going straight to our page keeps the address bar honest.
   await signIn(emailProviderId, { email, redirectTo: returnPath, redirect: false });

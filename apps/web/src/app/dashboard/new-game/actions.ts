@@ -1,6 +1,6 @@
 'use server';
 
-import { RecordNotFoundError } from '@teckin/db';
+import { checkPlanAllows, playersAllowedInGame, RecordNotFoundError } from '@teckin/db';
 import { questionSetReadiness } from '@teckin/questions';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -11,6 +11,7 @@ import {
   type LaunchSnapshot,
 } from '../../../lib/game-launch';
 import { requireHost } from '../../../lib/server/host';
+import { planLimits } from '../../../lib/server/platform';
 import { launchOnRealtime } from '../../../lib/server/realtime';
 
 /** What the New game form shows after a refused launch. */
@@ -52,13 +53,25 @@ export async function launchGame(
 
   const submission = readNewGameForm(form, registeredGames);
   if (!submission.ok) return refused(submission.problems, 'Check the highlighted settings.');
+  const plan = await checkPlanAllows(host.data, planLimits, 'liveGames');
+  if (!plan.allowed) {
+    return refused({}, `Your plan allows ${plan.limit} games at once. End a running game first.`);
+  }
+  const { planKey } = await host.data.organisation.get();
+  const roomSettings = {
+    ...submission.roomSettings,
+    maxPlayers: playersAllowedInGame(
+      submission.roomSettings.maxPlayers,
+      planLimits.forPlan(planKey),
+    ),
+  };
 
   let game;
   try {
     game = await host.data.gameSessions.create({
       gameType: submission.gameId,
       questionSetId: submission.questionSetId,
-      settings: { room: submission.roomSettings, game: submission.gameSettings } as never,
+      settings: { room: roomSettings, game: submission.gameSettings } as never,
       hostUserId: host.userId,
     });
   } catch (error) {
@@ -78,7 +91,7 @@ export async function launchGame(
     gameId: submission.gameId,
     gameSessionId: game.id,
     organisationId: host.membership.organisationId,
-    settings: submission.roomSettings,
+    settings: roomSettings,
     gameSettings: submission.gameSettings,
     questionSet: questionSetFromSnapshot(snapshot),
   });

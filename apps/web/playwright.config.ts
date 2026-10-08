@@ -43,6 +43,8 @@ export default defineConfig({
         AUTH_URL: e2eSignInOrigin,
         AUTH_LOG_MAGIC_LINKS: 'true',
         AUTH_DEV_MAILBOX_DIR: e2eMailboxDirectory,
+        // Every test signs in from this one machine; the limit itself has its own tests.
+        SIGN_IN_LIMIT_PER_ADDRESS: '100000',
         REALTIME_SHARED_SECRET: e2eRealtimeSharedSecret,
         REALTIME_INTERNAL_URL: `http://127.0.0.1:${realtimePort}`,
       },

@@ -6,7 +6,7 @@ export default [
     // Organisation scoping lives in the data-access layer: pages reach data only through the
     // signed-in host's `organisationData`, never through the raw database client.
     files: ['src/**/*.{ts,tsx}'],
-    ignores: ['src/auth.ts', 'src/lib/server/host.ts'],
+    ignores: ['src/auth.ts', 'src/lib/server/host.ts', 'src/lib/server/platform.ts'],
     rules: {
       'no-restricted-imports': [
         'error',

@@ -48,11 +48,16 @@ export default async function DashboardPage({
             {host.email}
           </p>
         </div>
-        <form action={signOutHost}>
-          <button type="submit" className={buttonClass}>
-            Sign out
-          </button>
-        </form>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/dashboard/account" className={`${buttonClass} ${linkButton}`}>
+            Account
+          </Link>
+          <form action={signOutHost}>
+            <button type="submit" className={buttonClass}>
+              Sign out
+            </button>
+          </form>
+        </div>
       </header>
 
       <section className="flex flex-col gap-2">
@@ -139,9 +144,18 @@ export default async function DashboardPage({
       </section>
 
       <section className="flex flex-col gap-3" aria-labelledby="recent-games-heading">
-        <h2 id="recent-games-heading" className="text-xl font-bold">
-          Recent games
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="recent-games-heading" className="text-xl font-bold">
+            Recent games
+          </h2>
+          <Link
+            href="/dashboard/games"
+            className="inline-flex min-h-touch items-center text-accent underline underline-offset-4"
+            data-testid="past-games-link"
+          >
+            Past games
+          </Link>
+        </div>
         {recentGames.length === 0 ? (
           <p className="text-ink-muted" data-testid="no-recent-games">
             No games yet. Games you run will show here, with their reports.
@@ -160,6 +174,14 @@ export default async function DashboardPage({
                     data-testid="recent-game-host-link"
                   >
                     {gameDisplayName(game.gameType)} · open host screen
+                  </Link>
+                ) : game.status === 'ended' ? (
+                  <Link
+                    href={`/dashboard/games/${game.id}`}
+                    className="inline-flex min-h-touch items-center text-lg font-semibold text-accent underline underline-offset-4"
+                    data-testid="recent-game-report-link"
+                  >
+                    {gameDisplayName(game.gameType)} · report
                   </Link>
                 ) : (
                   <span className="text-lg font-semibold">{gameDisplayName(game.gameType)}</span>
