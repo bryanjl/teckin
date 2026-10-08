@@ -7,8 +7,11 @@ export interface PhaserBootOptions {
   parent: HTMLElement;
   scenes: Phaser.Types.Scenes.SceneType[];
   backgroundColor: string;
-  /** Arcade physics gravity in world pixels per second squared. */
-  gravityY: number;
+  /**
+   * Arcade physics gravity in world pixels per second squared. Leave out for games that
+   * run their own simulation (such as the platformer kit's controller); Arcade is then off.
+   */
+  gravityY?: number;
   /**
    * Highest device pixel ratio the canvas renders at. Rendering at the full ratio of a 3x
    * phone costs fill rate the baseline Android may not have; see docs/DECISIONS.md.
@@ -65,13 +68,17 @@ export function bootPhaserGame(options: PhaserBootOptions): BootedPhaserGame {
       zoom: 1 / renderResolution,
       autoRound: true,
     },
-    physics: {
-      default: 'arcade',
-      arcade: {
-        gravity: { x: 0, y: options.gravityY },
-        debug: options.debugPhysics ?? false,
-      },
-    },
+    ...(options.gravityY === undefined
+      ? {}
+      : {
+          physics: {
+            default: 'arcade',
+            arcade: {
+              gravity: { x: 0, y: options.gravityY },
+              debug: options.debugPhysics ?? false,
+            },
+          },
+        }),
     render: { antialias: true, roundPixels: false },
     scene: options.scenes,
   });

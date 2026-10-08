@@ -13,7 +13,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@teckin/engine-core": "workspace:*"
+    "@teckin/engine-core": "workspace:*",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@teckin/config": "workspace:*",
