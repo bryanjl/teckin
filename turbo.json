@@ -11,7 +11,8 @@
     "lint": {},
     "typecheck": {},
     "test": {
-      "outputs": ["coverage/**"]
+      "outputs": ["coverage/**"],
+      "env": ["REDIS_URL"]
     },
     "dev": {
       "cache": false,
