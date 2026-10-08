@@ -129,3 +129,19 @@ Workspace packages ship TypeScript source directly (no build step); Next.js comp
 art build described above.
 
 Shared packages never import from a game. Games import from shared packages.
+
+## Deploying
+
+Nothing deploys automatically. `infra/` holds the Azure Bicep templates and
+`.github/workflows/deploy-web.yml` deploys the web app when started by hand from the Actions
+tab. See [`infra/README.md`](infra/README.md) for the one-time Azure setup.
+
+To try the production package locally:
+
+```sh
+pnpm install --config.node-linker=hoisted   # plain node_modules for the standalone server
+NEXT_OUTPUT=standalone pnpm build
+pnpm --filter web assemble:deploy
+PORT=3000 node apps/web/.deploy/apps/web/server.js
+pnpm install                                # back to the normal layout afterwards
+```
