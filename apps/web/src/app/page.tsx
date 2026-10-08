@@ -13,6 +13,9 @@ export default function HomePage() {
       >
         Play {climberDisplayName} solo
       </Link>
+      <Link href="/sign-in" className="text-lg font-semibold text-accent underline">
+        Host a game
+      </Link>
     </main>
   );
 }

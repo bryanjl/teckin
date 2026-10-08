@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
   // Workspace packages ship TypeScript source, so Next.js compiles them.
   transpilePackages: [
     '@teckin/climber',
+    '@teckin/db',
     '@teckin/engine-core',
     '@teckin/game-contracts',
     '@teckin/nicknames',

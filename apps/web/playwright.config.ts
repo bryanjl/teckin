@@ -1,5 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 import { e2eDevGameSecret } from './e2e/support/live-game';
+import { e2eAuthSecret, e2eMailboxDirectory, e2eSignInOrigin } from './e2e/support/sign-in';
 
 const port = Number(process.env.E2E_PORT ?? 3100);
 const baseURL = `http://127.0.0.1:${port}`;
@@ -35,6 +36,13 @@ export default defineConfig({
       url: `${baseURL}/api/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
+      // Sign-in tests read magic links from a mailbox folder; DATABASE_URL comes from the caller.
+      env: {
+        AUTH_SECRET: e2eAuthSecret,
+        AUTH_URL: e2eSignInOrigin,
+        AUTH_LOG_MAGIC_LINKS: 'true',
+        AUTH_DEV_MAILBOX_DIR: e2eMailboxDirectory,
+      },
     },
     {
       command: 'pnpm --filter realtime start',

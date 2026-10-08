@@ -19,6 +19,7 @@
   "dependencies": {
     "@colyseus/sdk": "0.18.5",
     "@teckin/climber": "workspace:*",
+    "@teckin/db": "workspace:*",
     "@teckin/engine-core": "workspace:*",
     "@teckin/game-contracts": "workspace:*",
     "@teckin/nicknames": "workspace:*",
