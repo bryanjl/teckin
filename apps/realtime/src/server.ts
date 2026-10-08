@@ -13,17 +13,18 @@ import { WebSocketTransport } from '@colyseus/ws-transport';
 import { roomSettingsSchema } from '@teckin/game-contracts';
 import { ClimberRoom, climberSettingsSchema } from '@teckin/climber/server';
 import {
-  type BaseGameRoom,
   configureRoomServices,
   createJoinCodeRegistry,
   hashSecret,
   InMemorySessionRecorder,
   joinCodePattern,
+  RoomWorkStats,
   type SessionRecorder,
 } from '@teckin/room-core';
 import { checkNickname } from '@teckin/nicknames';
 import { sampleQuestionSetIds } from '@teckin/questions';
 import { z } from 'zod';
+import { createLoadMetrics } from './load-metrics';
 import { createRateLimiter } from './rate-limiter';
 
 /** Settings the realtime server reads from the environment. */
@@ -43,6 +44,11 @@ export interface RealtimeServerOptions {
   recorder?: SessionRecorder;
   /** Join-code lookups allowed per client address per minute. */
   joinLookupsPerMinute?: number;
+  /**
+   * Serves `GET /metrics/load` (room work per patch, CPU, memory, event-loop delay) for the
+   * load test. Off by default; it only reports numbers, never players.
+   */
+  loadMetrics?: boolean;
 }
 
 /** A configured realtime server, ready to `listen`. */
@@ -79,7 +85,8 @@ const createGameBodySchema = z.object({
  */
 export function createRealtimeServer(options: RealtimeServerOptions = {}): RealtimeServer {
   const recorder = options.recorder ?? new InMemorySessionRecorder();
-  configureRoomServices({ recorder, checkNickname });
+  const workStats = options.loadMetrics ? new RoomWorkStats() : null;
+  configureRoomServices({ recorder, checkNickname, workMeter: workStats });
   const allowLookup = createRateLimiter({
     limit: options.joinLookupsPerMinute ?? 30,
     windowMs: 60_000,
@@ -127,15 +134,21 @@ export function createRealtimeServer(options: RealtimeServerOptions = {}): Realt
       questionSetId: body.data.questionSetId,
       gameSettings: climberSettingsSchema.parse(body.data.gameSettings),
     });
-    const created = matchMaker.getLocalRoomById(room.roomId) as BaseGameRoom | undefined;
-    const joinCode = created ? (created.state.joinCode as string) : '';
+    // With several processes the room may live on another one; its listing carries the code.
+    const metadata = room.metadata as { joinCode?: unknown } | undefined;
+    const joinCode = typeof metadata?.joinCode === 'string' ? metadata.joinCode : '';
     return Response.json({ sessionId: room.roomId, joinCode, hostKey }, { status: 201 });
   });
 
   const httpServer = createServer();
   const gameServer = defineServer({
     rooms: { [roomNames.climber]: defineRoom(ClimberRoom) },
-    routes: createRouter({ health, lookupJoinCode, createDevGame }),
+    routes: createRouter({
+      health,
+      lookupJoinCode,
+      createDevGame,
+      ...(workStats ? { loadMetrics: createLoadMetrics(workStats) } : {}),
+    }),
     transport: new WebSocketTransport({ server: httpServer }),
     ...(options.presence ? { presence: options.presence } : {}),
     ...(options.driver ? { driver: options.driver } : {}),

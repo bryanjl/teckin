@@ -1,4 +1,11 @@
-import { devices, expect, test, type Browser, type Page } from '@playwright/test';
+import {
+  devices,
+  expect,
+  test,
+  type Browser,
+  type BrowserContext,
+  type Page,
+} from '@playwright/test';
 import { e2eDevGameSecret } from './support/live-game';
 
 /**
@@ -11,12 +18,19 @@ test.describe('live multiplayer game', () => {
   test.skip(() => test.info().project.name !== 'iphone-portrait', 'Drives several devices itself');
   test.setTimeout(120_000);
 
+  const contexts: BrowserContext[] = [];
+  // Extra phones keep running (Phaser loops) until closed; free them so later tests are not slowed.
+  test.afterEach(async () => {
+    await Promise.all(contexts.splice(0).map((context) => context.close()));
+  });
+
   async function newPhone(browser: Browser, device: 'iPhone SE' | 'Pixel 7'): Promise<Page> {
     const { defaultBrowserType: _ignored, ...profile } = devices[device];
     const context = await browser.newContext({
       ...profile,
       baseURL: test.info().project.use.baseURL,
     });
+    contexts.push(context);
     return context.newPage();
   }
 

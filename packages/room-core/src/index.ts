@@ -2,5 +2,6 @@ export * from './base-game-room';
 export * from './join-codes';
 export * from './live-game';
 export * from './room-state';
+export * from './room-work-meter';
 export * from './session-recorder';
 export * from './question-sessions';

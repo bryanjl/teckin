@@ -11,6 +11,7 @@ const redisUrl = process.env.REDIS_URL?.trim();
 const { gameServer } = createRealtimeServer({
   devGameSecret: process.env.DEV_GAME_SECRET?.trim() || undefined,
   publicAddress: process.env.REALTIME_PUBLIC_ADDRESS?.trim() || undefined,
+  loadMetrics: process.env.REALTIME_LOAD_METRICS === '1',
   ...(redisUrl ? { presence: new RedisPresence(redisUrl), driver: new RedisDriver(redisUrl) } : {}),
 });
 

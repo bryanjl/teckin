@@ -12,6 +12,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { BaseGameRoom, configureRoomServices, hashSecret, roomServices } from './base-game-room';
 import { createJoinCodeRegistry } from './join-codes';
 import { RoomStateBase } from './room-state';
+import { RoomWorkStats } from './room-work-meter';
 import { InMemorySessionRecorder } from './session-recorder';
 import { bootTestServer } from './testing';
 
@@ -60,9 +61,27 @@ beforeEach(() => {
 afterEach(async () => {
   await colyseus.cleanup();
   recorder.clear();
+  configureRoomServices({ workMeter: null });
 });
 
 describe('BaseGameRoom', () => {
+  it('reports each patch window to the work meter, counting client messages', async () => {
+    const stats = new RoomWorkStats();
+    configureRoomServices({ workMeter: stats });
+    const room = await createGame();
+    const alice = await colyseus.connectTo(room, playerOptions('Alice'));
+    await whoAmI(alice);
+    await room.waitForNextPatch();
+    await room.waitForNextPatch();
+    const summary = stats.summary();
+    expect(summary.windows).toBeGreaterThanOrEqual(2);
+    expect(summary.rooms).toBe(1);
+    expect(summary.mostClientsInARoom).toBe(1);
+    expect(summary.maxMs).toBeGreaterThan(0);
+    stats.reset();
+    expect(stats.summary().windows).toBe(0);
+  });
+
   it('claims a 6-digit join code that resolves to the room and is freed when the game ends', async () => {
     const room = await createGame();
     expect(room.state.joinCode).toMatch(/^\d{6}$/);

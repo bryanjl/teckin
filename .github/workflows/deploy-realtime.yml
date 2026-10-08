@@ -1,0 +1,137 @@
+# Deploys the realtime server to Azure: Bicep for the registry, Key Vault, Managed Redis and
+# Container Apps environment, then the server image, then one Container App per realtime
+# process. Manual trigger only; nothing runs on push. Before the first run, follow
+# infra/README.md (resource group, federated deploy identity, repository variables).
+name: Deploy realtime
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: dev
+        type: choice
+        options: [dev, prod]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-realtime-${{ inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  TURBO_TELEMETRY_DISABLED: '1'
+
+jobs:
+  deploy:
+    name: Deploy realtime (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Check branch
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Deploy from main only (this run is on ${{ github.ref }})."
+          exit 1
+
+      - name: Check configuration
+        env:
+          CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          DEPLOY_PRINCIPAL_ID: ${{ vars.AZURE_DEPLOY_PRINCIPAL_ID }}
+        run: |
+          for name in CLIENT_ID TENANT_ID SUBSCRIPTION_ID RESOURCE_GROUP DEPLOY_PRINCIPAL_ID; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Repository variable AZURE_${name} is not set for this environment. See infra/README.md."
+              exit 1
+            fi
+          done
+
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Never ship what CI would reject.
+      - run: pnpm check
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # First pass: everything except the apps, so the registry exists before the image does.
+      - name: Deploy shared resources
+        id: shared
+        env:
+          # Only outside prod; Phase 4 replaces /dev/new-game with signed-in hosts.
+          DEV_GAME_SECRET: ${{ inputs.environment != 'prod' && secrets.DEV_GAME_SECRET || '' }}
+        run: |
+          outputs=$(az deployment group create \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "realtime-shared-${{ github.run_id }}" \
+            --template-file infra/realtime/main.bicep \
+            --parameters "infra/realtime/main.${{ inputs.environment }}.bicepparam" \
+            --parameters deployPrincipalId="${{ vars.AZURE_DEPLOY_PRINCIPAL_ID }}" \
+                         devGameSecret="$DEV_GAME_SECRET" \
+                         realtimeImageTag='' \
+            --query properties.outputs --output json)
+          echo "registry=$(echo "$outputs" | jq -r .registryName.value)" >> "$GITHUB_OUTPUT"
+          echo "login_server=$(echo "$outputs" | jq -r .registryLoginServer.value)" >> "$GITHUB_OUTPUT"
+          echo "image_name=$(echo "$outputs" | jq -r .realtimeImageName.value)" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push the realtime image
+        # A new AcrPush role assignment can take a few minutes to apply on the first deploy.
+        run: |
+          image="${{ steps.shared.outputs.login_server }}/${{ steps.shared.outputs.image_name }}:${{ github.sha }}"
+          docker build --file apps/realtime/Dockerfile --tag "$image" .
+          for attempt in $(seq 1 10); do
+            if az acr login --name "${{ steps.shared.outputs.registry }}" && docker push "$image"; then
+              exit 0
+            fi
+            echo "Push failed (attempt $attempt); waiting for the registry role to apply"
+            sleep 30
+          done
+          exit 1
+
+      - name: Deploy realtime processes
+        id: apps
+        env:
+          DEV_GAME_SECRET: ${{ inputs.environment != 'prod' && secrets.DEV_GAME_SECRET || '' }}
+        run: |
+          outputs=$(az deployment group create \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "realtime-apps-${{ github.run_id }}" \
+            --template-file infra/realtime/main.bicep \
+            --parameters "infra/realtime/main.${{ inputs.environment }}.bicepparam" \
+            --parameters deployPrincipalId="${{ vars.AZURE_DEPLOY_PRINCIPAL_ID }}" \
+                         devGameSecret="$DEV_GAME_SECRET" \
+                         realtimeImageTag="${{ github.sha }}" \
+            --query properties.outputs --output json)
+          echo "hosts=$(echo "$outputs" | jq -r '.shardHostNames.value | join(" ")')" >> "$GITHUB_OUTPUT"
+          echo "entry_url=$(echo "$outputs" | jq -r .realtimeEntryUrl.value)" >> "$GITHUB_OUTPUT"
+
+      - name: Check every process is healthy
+        run: |
+          for host in ${{ steps.apps.outputs.hosts }}; do
+            healthy=false
+            for attempt in $(seq 1 20); do
+              if curl --fail --silent "https://$host/health"; then echo " $host"; healthy=true; break; fi
+              sleep 15
+            done
+            if [ "$healthy" != true ]; then
+              echo "::error::https://$host/health did not report healthy within 5 minutes"
+              exit 1
+            fi
+          done
+          echo "Realtime entry URL: ${{ steps.apps.outputs.entry_url }}"
+          echo "Set the REALTIME_URL variable of this environment to it, then run Deploy web."

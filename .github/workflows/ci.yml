@@ -54,6 +54,24 @@ jobs:
           path: apps/web/playwright-report
           retention-days: 7
 
+  realtime-image:
+    name: Build realtime image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      # Builds the image the realtime deploy ships (never pushed) and checks it starts.
+      - run: docker build --file apps/realtime/Dockerfile --tag teckin-realtime:ci .
+      - name: Smoke test
+        run: |
+          docker run --detach --name realtime --publish 2567:2567 teckin-realtime:ci
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:2567/health; then exit 0; fi
+            sleep 1
+          done
+          docker logs realtime
+          exit 1
+
   infra:
     name: Validate Bicep
     runs-on: ubuntu-latest

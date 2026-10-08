@@ -10,7 +10,8 @@
     "./package.json": "./package.json",
     "./maps/course.json": "./maps/course.json",
     "./server": "./src/server/index.ts",
-    "./protocol": "./src/protocol.ts"
+    "./protocol": "./src/protocol.ts",
+    "./network-bot": "./scripts/network-bot.ts"
   },
   "scripts": {
     "build": "tsx scripts/build-art.ts",

@@ -39,6 +39,7 @@ import {
   type EnergyRules,
 } from './question-sessions';
 import { RosterPlayer, RoomStateBase } from './room-state';
+import type { RoomWorkMeter } from './room-work-meter';
 import type { SessionRecorder } from './session-recorder';
 
 /** Hashes a secret (host key or device key) so rooms never hold the raw value. */
@@ -88,6 +89,8 @@ export interface RoomServices {
    * fast-forward a game raise it.
    */
   maxMessagesPerSecond: number;
+  /** Measures each room's work per state patch (load tests, metrics). Off when null. */
+  workMeter: RoomWorkMeter | null;
 }
 
 /** Serves the bundled sample question sets by id. */
@@ -107,6 +110,7 @@ export const roomServices: RoomServices = {
   now: () => Date.now(),
   loadQuestionSet: loadSampleQuestionSet,
   maxMessagesPerSecond: 60,
+  workMeter: null,
 };
 
 /** Sets process-wide room services (recorder, nickname check, reconnect window). */
@@ -155,6 +159,9 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
   private lastConnectedAtMs = 0;
   private joinCodeReleased = false;
   private joinCodeRefreshedAtMs = 0;
+  private workMeter: RoomWorkMeter | null = null;
+  /** Work since the last patch (messages and ticks), when a work meter is set. */
+  private pendingWorkMs = 0;
 
   /** Creates the synchronised state. Games with extended state override this. */
   protected createState(): State {
@@ -169,6 +176,7 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
     this.questionSetId = options.questionSetId;
     this.autoDispose = false;
     this.maxMessagesPerSecond = roomServices.maxMessagesPerSecond;
+    if (roomServices.workMeter) this.meterMessages(roomServices.workMeter);
     // Room cap plus a few seats for host screens (laptop and projector).
     this.maxClients = settings.maxPlayers + 4;
     this.liveGame = new LiveGame(
@@ -561,7 +569,44 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
     });
   }
 
+  /**
+   * Counts message handling toward this room's work. Colyseus binds `_onMessage` per client
+   * when it joins (and patches the prototype the same way to simulate latency), so an
+   * instance wrapper set before anyone joins sees every message.
+   */
+  private meterMessages(meter: RoomWorkMeter): void {
+    this.workMeter = meter;
+    const internals = this as unknown as { _onMessage: (client: Client, buffer: unknown) => void };
+    const handle = internals._onMessage.bind(this);
+    internals._onMessage = (client, buffer) => {
+      const started = performance.now();
+      handle(client, buffer);
+      this.pendingWorkMs += performance.now() - started;
+    };
+  }
+
+  /** Sends the state patch; with a work meter, closes this room's patch window. */
+  override broadcastPatch(): boolean {
+    const meter = this.workMeter;
+    if (!meter) return super.broadcastPatch();
+    const started = performance.now();
+    const changed = super.broadcastPatch();
+    meter.recordPatchWindow(
+      this.roomId,
+      this.pendingWorkMs + performance.now() - started,
+      this.clients.length,
+    );
+    this.pendingWorkMs = 0;
+    return changed;
+  }
+
   private tick(): void {
+    const started = this.workMeter ? performance.now() : 0;
+    this.runTick();
+    if (this.workMeter) this.pendingWorkMs += performance.now() - started;
+  }
+
+  private runTick(): void {
     const nowMs = this.now();
     for (const event of this.liveGame.tick(nowMs)) {
       this.applyLifecycleEvent(event);

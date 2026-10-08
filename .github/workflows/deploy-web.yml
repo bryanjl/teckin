@@ -70,6 +70,8 @@ jobs:
         env:
           NEXT_OUTPUT: standalone
           NEXT_PUBLIC_CLIMBER_THEME: ${{ vars.CLIMBER_THEME || 'cogspire' }}
+          # The realtime entry address printed by "Deploy realtime"; empty means the page's host.
+          NEXT_PUBLIC_REALTIME_URL: ${{ vars.REALTIME_URL }}
       - run: pnpm --filter web assemble:deploy
 
       - uses: azure/login@v2

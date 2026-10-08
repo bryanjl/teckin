@@ -60,9 +60,15 @@ importers:
       '@teckin/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@teckin/session':
+        specifier: workspace:*
+        version: link:../../packages/session
       '@types/node':
         specifier: 22.20.5
         version: 22.20.5
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
       eslint:
         specifier: 10.12.0
         version: 10.12.0(jiti@2.7.0)
