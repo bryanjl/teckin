@@ -8,7 +8,7 @@ import {
   serverMessageTypes,
   type WelcomeMessage,
 } from '@teckin/game-contracts';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BaseGameRoom, configureRoomServices, hashSecret, roomServices } from './base-game-room';
 import { createJoinCodeRegistry } from './join-codes';
 import { RoomStateBase } from './room-state';
@@ -137,11 +137,28 @@ describe('BaseGameRoom', () => {
     await room.waitForMessage(hostMessageTypes.start);
     expect(room.state.phase).toBe('lobby');
 
-    host.send(hostMessageTypes.addTime, { minutes: 'lots' });
-    expect(await host.waitForMessage(serverMessageTypes.hostCommandRejected)).toEqual({
-      type: hostMessageTypes.addTime,
-      reason: 'invalidMessage',
-    });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      for (const minutes of ['lots', -1]) {
+        host.send(hostMessageTypes.addTime, { minutes });
+        expect(await host.waitForMessage(serverMessageTypes.hostCommandRejected)).toEqual({
+          type: hostMessageTypes.addTime,
+          reason: 'invalidMessage',
+        });
+      }
+      // Dropped and logged, but a burst of bad messages logs once.
+      const invalidLogs = warn.mock.calls.filter(
+        ([text]) => text === 'Dropped an invalid client message',
+      );
+      expect(invalidLogs).toHaveLength(1);
+      expect(invalidLogs[0]![1]).toEqual({
+        sessionId: room.roomId,
+        type: hostMessageTypes.addTime,
+        playerId: undefined,
+      });
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('runs lobby, countdown, playing and ended on the server clock, with added time', async () => {

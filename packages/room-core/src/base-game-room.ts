@@ -160,6 +160,8 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
   private joinCodeReleased = false;
   private joinCodeRefreshedAtMs = 0;
   private workMeter: RoomWorkMeter | null = null;
+  /** When each message type last logged a malformed message, so a flood logs once. */
+  private readonly invalidLoggedAtMs = new Map<string, number>();
   /** Work since the last patch (messages and ticks), when a work meter is set. */
   private pendingWorkMs = 0;
 
@@ -345,6 +347,23 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
   }
 
   /** Sends an event to the session recorder, if one is configured. */
+  /**
+   * Logs a client message that failed validation (the spec: drop and log). At most one line
+   * per message type every 10 seconds per room, so a broken or hostile client cannot flood
+   * the logs. Logs ids only, never nicknames or addresses.
+   */
+  protected logInvalidMessage(type: string, client: Client): void {
+    const nowMs = Date.now();
+    const lastMs = this.invalidLoggedAtMs.get(type);
+    if (lastMs !== undefined && nowMs - lastMs < 10_000) return;
+    this.invalidLoggedAtMs.set(type, nowMs);
+    console.warn('Dropped an invalid client message', {
+      sessionId: this.roomId,
+      type,
+      playerId: this.playerIdOf(client) ?? undefined,
+    });
+  }
+
   protected record(event: Parameters<SessionRecorder['record']>[0]): void {
     void Promise.resolve(roomServices.recorder?.record(event)).catch((error: unknown) => {
       console.error('Session recorder failed', { sessionId: this.roomId, error });
@@ -409,7 +428,10 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
     const found = this.sessionPlayer(client);
     if ('refusal' in found) throw new Error(found.refusal);
     const parsed = answerRequestSchema.safeParse(message);
-    if (!parsed.success) throw new Error('invalidAnswer' satisfies SessionRefusal);
+    if (!parsed.success) {
+      this.logInvalidMessage(sessionRequestTypes.answer, client);
+      throw new Error('invalidAnswer' satisfies SessionRefusal);
+    }
     const session = this.questionSessions!.forPlayer(found.playerId);
     const result = session.answer(parsed.data.questionId, parsed.data.chosenOptionId);
     if (!result.ok) throw new Error(result.reason);
@@ -438,6 +460,7 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
   private handleSpend(client: Client, message: unknown): void {
     const found = this.sessionPlayer(client);
     const parsed = spendBatchSchema.safeParse(message);
+    if (!parsed.success) this.logInvalidMessage(sessionMessageTypes.spend, client);
     if ('refusal' in found || !parsed.success) {
       return;
     }
@@ -491,6 +514,7 @@ export class BaseGameRoom<State extends RoomStateBase = RoomStateBase> extends R
           return;
         }
         const parsed = hostMessageSchemas[type].safeParse(message ?? {});
+        if (!parsed.success) this.logInvalidMessage(type, client);
         const rejection = parsed.success
           ? handler(parsed.data as z.infer<(typeof hostMessageSchemas)[Type]>)
           : 'invalidMessage';

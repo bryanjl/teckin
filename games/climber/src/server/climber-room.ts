@@ -229,6 +229,7 @@ export class ClimberRoom extends BaseGameRoom<ClimberRoomState> {
     const record = playerId === null ? undefined : this.records.get(playerId);
     const progress = playerId === null ? undefined : this.state.climbers.get(playerId);
     const parsed = moveReportSchema.safeParse(message);
+    if (!parsed.success) this.logInvalidMessage(climberClientMessageTypes.move, client);
     if (
       playerId === null ||
       !record ||
