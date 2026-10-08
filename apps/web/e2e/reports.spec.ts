@@ -17,23 +17,25 @@ test.describe('reports and account deletion', () => {
     'Data checks, one phone is enough',
   );
 
-  let database: PrismaClient;
-  test.beforeAll(() => {
-    database = createDatabaseClient({
+  let database: PrismaClient | undefined;
+  /** The database, opened on first use (hooks also run in projects that skip these tests). */
+  const db = (): PrismaClient => {
+    database ??= createDatabaseClient({
       connectionString: process.env.DATABASE_URL!,
       maxConnections: 2,
     });
-  });
+    return database;
+  };
   test.afterAll(async () => {
-    await database.$disconnect();
+    await database?.$disconnect();
   });
 
   /** The signed-in host's organisation data, looked up by their email. */
   async function dataOf(email: string) {
-    const membership = await database.membership.findFirstOrThrow({
+    const membership = await db().membership.findFirstOrThrow({
       where: { user: { email: email.toLowerCase() } },
     });
-    return organisationData(database, membership.organisationId);
+    return organisationData(db(), membership.organisationId);
   }
 
   /**
@@ -172,12 +174,12 @@ test.describe('reports and account deletion', () => {
     await page.getByTestId('delete-account').click();
     await expect(page.getByTestId('account-deleted')).toBeVisible();
 
-    expect(await database.user.count({ where: { email: email.toLowerCase() } })).toBe(0);
-    expect(await database.organisation.count({ where: { id: organisationId } })).toBe(0);
-    expect(await database.gameSession.count({ where: { id: gameId } })).toBe(0);
-    expect(await database.answerEvent.count({ where: { organisationId } })).toBe(0);
-    expect(await database.participant.count({ where: { organisationId } })).toBe(0);
-    expect(await database.questionSet.count({ where: { organisationId } })).toBe(0);
+    expect(await db().user.count({ where: { email: email.toLowerCase() } })).toBe(0);
+    expect(await db().organisation.count({ where: { id: organisationId } })).toBe(0);
+    expect(await db().gameSession.count({ where: { id: gameId } })).toBe(0);
+    expect(await db().answerEvent.count({ where: { organisationId } })).toBe(0);
+    expect(await db().participant.count({ where: { organisationId } })).toBe(0);
+    expect(await db().questionSet.count({ where: { organisationId } })).toBe(0);
 
     await page.goto('/dashboard');
     await expect(page).toHaveURL(/\/sign-in/);

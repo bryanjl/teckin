@@ -1,7 +1,7 @@
 'use server';
 
 import { headers } from 'next/headers';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { signIn, signOut } from '../auth';
 import { allowSignInEmail, allowSignInFromAddress, requestAddress } from '../lib/server/platform';
 import { readAuthEnvironment } from './auth-environment';
@@ -35,7 +35,14 @@ export async function signInWithEmail(formData: FormData): Promise<void> {
   }
   // Auth.js would redirect through /api/auth/verify-request, which leaves that address in the
   // browser; going straight to our page keeps the address bar honest.
-  await signIn(emailProviderId, { email, redirectTo: returnPath, redirect: false });
+  try {
+    await signIn(emailProviderId, { email, redirectTo: returnPath, redirect: false });
+  } catch (error) {
+    unstable_rethrow(error);
+    // The sender refused (its own per-email limit) or the mail server failed.
+    console.warn('Sign-in email not sent', { reason: (error as Error).message });
+    backToSignIn('EmailNotSent', returnPath);
+  }
   redirect('/sign-in/check-email');
 }
 

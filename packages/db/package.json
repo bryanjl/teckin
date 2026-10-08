@@ -19,7 +19,8 @@
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:status": "prisma migrate status",
-    "db:check-drift": "prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code"
+    "db:check-drift": "prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code",
+    "retention": "tsx --env-file-if-exists=.env scripts/run-retention.ts"
   },
   "devDependencies": {
     "@teckin/config": "workspace:*",
@@ -27,6 +28,7 @@
     "@types/pg": "8.23.1",
     "eslint": "10.12.0",
     "prisma": "7.10.0",
+    "tsx": "4.23.15",
     "typescript": "6.0.3",
     "vitest": "5.0.3"
   },

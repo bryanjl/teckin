@@ -13,6 +13,7 @@ const errorMessages: Record<string, string> = {
   Verification: 'That sign-in link has expired or was already used. Ask for a new one below.',
   EmailUnavailable: 'Sign-in by email is not available here.',
   ProviderUnavailable: 'That sign-in option is not available here.',
+  EmailNotSent: 'We could not send the sign-in email. Wait a few minutes, then try again.',
   TooManyAttempts: 'Too many sign-in attempts. Wait 15 minutes, then try again.',
   OAuthAccountNotLinked:
     'That email already signs in another way. Use the method you used the first time.',

@@ -63,6 +63,14 @@ through `EMAIL_SERVER` (SMTP). After changing `packages/db/prisma/schema.prisma`
 Database tests (`pnpm test`) use `DATABASE_URL`, each in a throwaway schema; without it they are
 skipped locally (CI always runs them).
 
+Games are recorded by the realtime server, so give `apps/realtime/.env` the same `DATABASE_URL`
+(and the same `REALTIME_SHARED_SECRET` as the web app). Finished games then appear under
+"Past games" on the dashboard with a report (ranking, accuracy per player and per question,
+CSV downloads). The realtime server also runs the data retention job every 6 hours: players'
+answers are deleted `PLAYER_DATA_RETENTION_MONTHS` (default 12) after a game. To run it once by
+hand: `pnpm --filter @teckin/db retention`. Hosts delete their account (and their organisation's
+data) under Account on the dashboard.
+
 ## Playing on a phone over your local network
 
 The dev server listens on every network interface (`0.0.0.0`), so phones on the same Wi-Fi can open it.
