@@ -36,6 +36,16 @@ export interface ClientGameModule {
 export interface ClientGameMountOptions {
   /** Query-string flags such as `debug` or `checkpoints`, already parsed. */
   flags: Readonly<Record<string, string>>;
+  /**
+   * URL of the folder where the app serves this game's built assets (theme atlases and
+   * manifests), ending in `/`. The app decides where assets live; the game never assumes.
+   */
+  assetBaseUrl: string;
+  /**
+   * Theme pack chosen by the deployment (and later the host). Optional: the game falls back
+   * to its own default, and a `theme` flag overrides it for previews.
+   */
+  themeId?: string;
 }
 
 /**

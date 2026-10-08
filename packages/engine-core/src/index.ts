@@ -10,3 +10,4 @@ export * from './page/pause-controller';
 export * from './page/play-surface-guards';
 export * from './page/wake-lock';
 export * from './scaling';
+export * from './theme';
