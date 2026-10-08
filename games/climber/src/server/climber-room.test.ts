@@ -211,6 +211,18 @@ describe('ClimberRoom', () => {
     expect(resumed.session.energy).toBe(energyBefore);
     expect(Math.round(resumed.run.heightMetres)).toBe(heightBefore);
     expect(resumed.run.progress.goalsReached).toBe(bot.run.progress.goalsReached);
+
+    // The new page numbers its reports from 1 again; the room still follows the climb.
+    for (let frame = 0; frame < 100; frame += 1) {
+      await resumed.play(0.1);
+      fakeNowMs += 100;
+      await sleep(1);
+    }
+    await waitFor(
+      () => (room.state.climbers.get(bot.playerId)?.heightMetres ?? 0) > heightBefore,
+      'the resumed climb to count',
+    );
+    expect(resumed.link.corrections).toBe(0);
   }, 60_000);
 
   it('gives nothing for impossible positions, forged answers, unknown spends or unpaid jumps', async () => {

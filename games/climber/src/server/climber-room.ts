@@ -146,6 +146,15 @@ export class ClimberRoom extends BaseGameRoom<ClimberRoomState> {
     this.state.climbers.set(player.id, progress);
   }
 
+  /**
+   * A device came back with its device key (a reload or a discarded tab): its new page numbers
+   * reports from 1 again, so forget the old sequence or every report would look stale.
+   */
+  protected override onPlayerResumed(player: LivePlayer): void {
+    const record = this.records.get(player.id);
+    if (record) record.lastReportSeq = -1;
+  }
+
   protected override onPlayerRemoved(player: LivePlayer): void {
     this.records.delete(player.id);
     this.state.climbers.delete(player.id);
