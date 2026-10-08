@@ -1,0 +1,865 @@
+{
+  "id": "spelling",
+  "title": "Spelling",
+  "description": "Pick the correct spelling of common tricky words.",
+  "questions": [
+    {
+      "id": "spelling-001",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "because",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "becuase",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "becaus",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "beacause",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-002",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "friend",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "freind",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "frend",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "friendd",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-003",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "believe",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "beleive",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "belive",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "beleave",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-004",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "different",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "diffrent",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "diferent",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "differant",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-005",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "beautiful",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "beatiful",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "beautifull",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "butiful",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-006",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "separate",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "seperate",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "separete",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "seprate",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-007",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "necessary",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "neccessary",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "necesary",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "nessessary",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-008",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "library",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "libary",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "liberry",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "libery",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-009",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "February",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "Febuary",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "Februry",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Febrary",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-010",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Wednesday",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "Wensday",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "Wednsday",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Wedensday",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-011",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "surprise",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "suprise",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "surprize",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "serprise",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-012",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "probably",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "probly",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "probaly",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "probabley",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-013",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "disappear",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "dissapear",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "disapear",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "dissappear",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-014",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "knowledge",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "knowlege",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "nowledge",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "knowledj",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-015",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "height",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "hieght",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "hight",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "heigth",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-016",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "island",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "iland",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "islend",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "ieland",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-017",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "answer",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "anser",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "answar",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "ansewr",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-018",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "caught",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "cought",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "caugt",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "cawght",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-019",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "thought",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "thougt",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "thort",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "thougth",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-020",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "special",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "speshal",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "specail",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "spetial",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-021",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "tomorrow",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "tommorow",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "tomorow",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "tommorrow",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-022",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "calendar",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "calender",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "calandar",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "callendar",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-023",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "science",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "sience",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "scince",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "sciense",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-024",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "environment",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "enviroment",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "envirnment",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "environmant",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-025",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "immediately",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "immediatly",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "imediately",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "immedietly",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-026",
+      "type": "multipleChoice",
+      "prompt": "Which spelling is correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "guard",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "gaurd",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "gard",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "guarde",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-027",
+      "type": "trueFalse",
+      "prompt": "“Recieve” is spelled correctly.",
+      "options": [
+        {
+          "id": "true",
+          "text": "True",
+          "isCorrect": false
+        },
+        {
+          "id": "false",
+          "text": "False",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "id": "spelling-028",
+      "type": "trueFalse",
+      "prompt": "“Across” is spelled correctly.",
+      "options": [
+        {
+          "id": "true",
+          "text": "True",
+          "isCorrect": true
+        },
+        {
+          "id": "false",
+          "text": "False",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-029",
+      "type": "trueFalse",
+      "prompt": "“Alot” is the correct way to write “a lot”.",
+      "options": [
+        {
+          "id": "true",
+          "text": "True",
+          "isCorrect": false
+        },
+        {
+          "id": "false",
+          "text": "False",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "id": "spelling-030",
+      "type": "trueFalse",
+      "prompt": "“Rhythm” is spelled correctly.",
+      "options": [
+        {
+          "id": "true",
+          "text": "True",
+          "isCorrect": true
+        },
+        {
+          "id": "false",
+          "text": "False",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-031",
+      "type": "trueFalse",
+      "prompt": "“Grammer” is spelled correctly.",
+      "options": [
+        {
+          "id": "true",
+          "text": "True",
+          "isCorrect": false
+        },
+        {
+          "id": "false",
+          "text": "False",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "id": "spelling-032",
+      "type": "trueFalse",
+      "prompt": "The plural of “child” is “children”.",
+      "options": [
+        {
+          "id": "true",
+          "text": "True",
+          "isCorrect": true
+        },
+        {
+          "id": "false",
+          "text": "False",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-033",
+      "type": "multipleChoice",
+      "prompt": "What is the plural of “mouse”?",
+      "options": [
+        {
+          "id": "a",
+          "text": "mice",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "mouses",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "meese",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "mousies",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "spelling-034",
+      "type": "multipleChoice",
+      "prompt": "Which word rhymes with “light”?",
+      "options": [
+        {
+          "id": "a",
+          "text": "kite",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "lit",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "late",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "loot",
+          "isCorrect": false
+        }
+      ]
+    }
+  ]
+}

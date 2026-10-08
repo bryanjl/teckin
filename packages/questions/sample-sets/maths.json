@@ -1,0 +1,1010 @@
+{
+  "id": "maths",
+  "title": "Maths (ages 8 to 10)",
+  "description": "Times tables, adding, taking away, dividing, place value, fractions and word problems.",
+  "questions": [
+    {
+      "id": "maths-001",
+      "type": "multipleChoice",
+      "prompt": "What is 6 × 7?",
+      "options": [
+        {
+          "id": "a",
+          "text": "42",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "48",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "35",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "43",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-002",
+      "type": "multipleChoice",
+      "prompt": "What is 8 × 4?",
+      "options": [
+        {
+          "id": "a",
+          "text": "32",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "40",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "28",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "33",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-003",
+      "type": "multipleChoice",
+      "prompt": "What is 9 × 6?",
+      "options": [
+        {
+          "id": "a",
+          "text": "54",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "63",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "48",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "55",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-004",
+      "type": "multipleChoice",
+      "prompt": "What is 7 × 7?",
+      "options": [
+        {
+          "id": "a",
+          "text": "49",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "56",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "42",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "50",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-005",
+      "type": "multipleChoice",
+      "prompt": "What is 3 × 8?",
+      "options": [
+        {
+          "id": "a",
+          "text": "24",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "27",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "16",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "25",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-006",
+      "type": "multipleChoice",
+      "prompt": "What is 12 × 5?",
+      "options": [
+        {
+          "id": "a",
+          "text": "60",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "72",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "55",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "61",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-007",
+      "type": "multipleChoice",
+      "prompt": "What is 4 × 9?",
+      "options": [
+        {
+          "id": "a",
+          "text": "36",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "40",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "27",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "37",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-008",
+      "type": "multipleChoice",
+      "prompt": "What is 11 × 3?",
+      "options": [
+        {
+          "id": "a",
+          "text": "33",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "44",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "30",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "34",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-009",
+      "type": "multipleChoice",
+      "prompt": "What is 47 + 38?",
+      "options": [
+        {
+          "id": "a",
+          "text": "85",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "95",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "75",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "86",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-010",
+      "type": "multipleChoice",
+      "prompt": "What is 125 + 67?",
+      "options": [
+        {
+          "id": "a",
+          "text": "192",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "202",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "182",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "193",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-011",
+      "type": "multipleChoice",
+      "prompt": "What is 256 + 144?",
+      "options": [
+        {
+          "id": "a",
+          "text": "400",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "410",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "390",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "401",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-012",
+      "type": "multipleChoice",
+      "prompt": "What is 399 + 1?",
+      "options": [
+        {
+          "id": "a",
+          "text": "400",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "410",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "390",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "401",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-013",
+      "type": "multipleChoice",
+      "prompt": "What is 83 − 29?",
+      "options": [
+        {
+          "id": "a",
+          "text": "54",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "64",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "44",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "56",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-014",
+      "type": "multipleChoice",
+      "prompt": "What is 150 − 75?",
+      "options": [
+        {
+          "id": "a",
+          "text": "75",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "85",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "65",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "77",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-015",
+      "type": "multipleChoice",
+      "prompt": "What is 500 − 123?",
+      "options": [
+        {
+          "id": "a",
+          "text": "377",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "387",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "367",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "379",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-016",
+      "type": "multipleChoice",
+      "prompt": "What is 64 − 18?",
+      "options": [
+        {
+          "id": "a",
+          "text": "46",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "56",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "36",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "48",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-017",
+      "type": "multipleChoice",
+      "prompt": "What is 36 ÷ 4?",
+      "options": [
+        {
+          "id": "a",
+          "text": "9",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "10",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "8",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "11",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-018",
+      "type": "multipleChoice",
+      "prompt": "What is 45 ÷ 5?",
+      "options": [
+        {
+          "id": "a",
+          "text": "9",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "10",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "8",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "11",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-019",
+      "type": "multipleChoice",
+      "prompt": "What is 56 ÷ 8?",
+      "options": [
+        {
+          "id": "a",
+          "text": "7",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "8",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "6",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "9",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-020",
+      "type": "multipleChoice",
+      "prompt": "What is 81 ÷ 9?",
+      "options": [
+        {
+          "id": "a",
+          "text": "9",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "10",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "8",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "11",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-021",
+      "type": "multipleChoice",
+      "prompt": "What is 42 ÷ 7?",
+      "options": [
+        {
+          "id": "a",
+          "text": "6",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "7",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "5",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "8",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-022",
+      "type": "multipleChoice",
+      "prompt": "What is the value of the 7 in 4,732?",
+      "options": [
+        {
+          "id": "a",
+          "text": "700",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "7",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "70",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "7000",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-023",
+      "type": "multipleChoice",
+      "prompt": "Which number is the largest?",
+      "options": [
+        {
+          "id": "a",
+          "text": "1,009",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "990",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "1,000",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "909",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-024",
+      "type": "multipleChoice",
+      "prompt": "Round 68 to the nearest ten.",
+      "options": [
+        {
+          "id": "a",
+          "text": "70",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "60",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "68",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "80",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-025",
+      "type": "multipleChoice",
+      "prompt": "Round 349 to the nearest hundred.",
+      "options": [
+        {
+          "id": "a",
+          "text": "300",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "400",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "350",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "340",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-026",
+      "type": "multipleChoice",
+      "prompt": "What fraction of a pizza is left if 3 of its 4 equal slices are eaten?",
+      "options": [
+        {
+          "id": "a",
+          "text": "1/4",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "3/4",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "1/3",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "4/3",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-027",
+      "type": "multipleChoice",
+      "prompt": "Which fraction is the same as one half?",
+      "options": [
+        {
+          "id": "a",
+          "text": "2/4",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "1/4",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "2/3",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "3/4",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-028",
+      "type": "multipleChoice",
+      "prompt": "Sam has 3 bags with 6 marbles in each. How many marbles does Sam have?",
+      "options": [
+        {
+          "id": "a",
+          "text": "18",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "9",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "15",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "24",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-029",
+      "type": "multipleChoice",
+      "prompt": "A book costs 4 coins. How many books can you buy with 20 coins?",
+      "options": [
+        {
+          "id": "a",
+          "text": "5",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "4",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "6",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "16",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-030",
+      "type": "multipleChoice",
+      "prompt": "There are 28 children. They make teams of 4. How many teams are there?",
+      "options": [
+        {
+          "id": "a",
+          "text": "7",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "6",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "8",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "24",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-031",
+      "type": "multipleChoice",
+      "prompt": "How many minutes are in one hour?",
+      "options": [
+        {
+          "id": "a",
+          "text": "60",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "100",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "30",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "24",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-032",
+      "type": "multipleChoice",
+      "prompt": "How many sides does a hexagon have?",
+      "options": [
+        {
+          "id": "a",
+          "text": "6",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "5",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "7",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "8",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-033",
+      "type": "multipleChoice",
+      "prompt": "What is the perimeter of a square with sides of 5 cm?",
+      "options": [
+        {
+          "id": "a",
+          "text": "20 cm",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "10 cm",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "25 cm",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "15 cm",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-034",
+      "type": "multipleChoice",
+      "prompt": "What comes next: 3, 6, 9, 12, …?",
+      "options": [
+        {
+          "id": "a",
+          "text": "15",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "13",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "14",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "18",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-035",
+      "type": "trueFalse",
+      "prompt": "7 × 8 = 56",
+      "options": [
+        {
+          "id": "true",
+          "text": "True",
+          "isCorrect": true
+        },
+        {
+          "id": "false",
+          "text": "False",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-036",
+      "type": "trueFalse",
+      "prompt": "100 − 37 = 73",
+      "options": [
+        {
+          "id": "true",
+          "text": "True",
+          "isCorrect": false
+        },
+        {
+          "id": "false",
+          "text": "False",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "id": "maths-037",
+      "type": "trueFalse",
+      "prompt": "Half of 50 is 20.",
+      "options": [
+        {
+          "id": "true",
+          "text": "True",
+          "isCorrect": false
+        },
+        {
+          "id": "false",
+          "text": "False",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "id": "maths-038",
+      "type": "trueFalse",
+      "prompt": "An even number can always be split into two equal groups of whole numbers.",
+      "options": [
+        {
+          "id": "true",
+          "text": "True",
+          "isCorrect": true
+        },
+        {
+          "id": "false",
+          "text": "False",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "maths-039",
+      "type": "trueFalse",
+      "prompt": "9 × 0 = 9",
+      "options": [
+        {
+          "id": "true",
+          "text": "True",
+          "isCorrect": false
+        },
+        {
+          "id": "false",
+          "text": "False",
+          "isCorrect": true
+        }
+      ]
+    }
+  ]
+}

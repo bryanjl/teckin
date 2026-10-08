@@ -1,0 +1,801 @@
+{
+  "id": "general-knowledge",
+  "title": "General knowledge",
+  "description": "Animals, space, the body and the world around us.",
+  "questions": [
+    {
+      "id": "general-001",
+      "type": "multipleChoice",
+      "prompt": "How many legs does a spider have?",
+      "options": [
+        {
+          "id": "a",
+          "text": "8",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "6",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "10",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "4",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-002",
+      "type": "multipleChoice",
+      "prompt": "Which planet is closest to the Sun?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Mercury",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "Venus",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "Mars",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Earth",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-003",
+      "type": "multipleChoice",
+      "prompt": "What is the largest ocean on Earth?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Pacific Ocean",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "Atlantic Ocean",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "Indian Ocean",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Arctic Ocean",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-004",
+      "type": "multipleChoice",
+      "prompt": "What do bees make?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Honey",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "Milk",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "Silk",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Wax crayons",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-005",
+      "type": "multipleChoice",
+      "prompt": "How many days are in a week?",
+      "options": [
+        {
+          "id": "a",
+          "text": "7",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "5",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "6",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "10",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-006",
+      "type": "multipleChoice",
+      "prompt": "Which gas do plants take in from the air to make food?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Carbon dioxide",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "Oxygen",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "Helium",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Hydrogen",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-007",
+      "type": "multipleChoice",
+      "prompt": "Water freezes at what temperature in degrees Celsius?",
+      "options": [
+        {
+          "id": "a",
+          "text": "0 °C",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "10 °C",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "100 °C",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "−10 °C",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-008",
+      "type": "multipleChoice",
+      "prompt": "Which is the biggest animal alive today?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Blue whale",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "African elephant",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "Giraffe",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Great white shark",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-009",
+      "type": "multipleChoice",
+      "prompt": "How many continents are there?",
+      "options": [
+        {
+          "id": "a",
+          "text": "7",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "5",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "6",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "9",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-010",
+      "type": "multipleChoice",
+      "prompt": "Which part of a plant is usually under the ground?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Roots",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "Petals",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "Leaves",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Flowers",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-011",
+      "type": "multipleChoice",
+      "prompt": "What do caterpillars turn into?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Butterflies or moths",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "Beetles",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "Spiders",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Frogs",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-012",
+      "type": "multipleChoice",
+      "prompt": "Which of these is a mammal?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Dolphin",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "Shark",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "Salmon",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Octopus",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-013",
+      "type": "multipleChoice",
+      "prompt": "What is the name of the star at the centre of our solar system?",
+      "options": [
+        {
+          "id": "a",
+          "text": "The Sun",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "The Moon",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "Polaris",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Mars",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-014",
+      "type": "multipleChoice",
+      "prompt": "How many colours are usually named in a rainbow?",
+      "options": [
+        {
+          "id": "a",
+          "text": "7",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "5",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "6",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "8",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-015",
+      "type": "multipleChoice",
+      "prompt": "Which sense do you use your nose for?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Smell",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "Taste",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "Hearing",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Touch",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-016",
+      "type": "multipleChoice",
+      "prompt": "What is frozen water called?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Ice",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "Steam",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "Fog",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Dew",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-017",
+      "type": "multipleChoice",
+      "prompt": "Which animal is known for changing colour to match its surroundings?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Chameleon",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "Elephant",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "Penguin",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Horse",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-018",
+      "type": "multipleChoice",
+      "prompt": "Where does a baby kangaroo grow after it is born?",
+      "options": [
+        {
+          "id": "a",
+          "text": "In its mother's pouch",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "In a nest",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "In an egg",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Under a rock",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-019",
+      "type": "multipleChoice",
+      "prompt": "Which shape has three sides?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Triangle",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "Square",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "Circle",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Pentagon",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-020",
+      "type": "multipleChoice",
+      "prompt": "What do we call a scientist who studies rocks?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Geologist",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "Astronomer",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "Botanist",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Chef",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-021",
+      "type": "multipleChoice",
+      "prompt": "Which of these is a source of light?",
+      "options": [
+        {
+          "id": "a",
+          "text": "A candle flame",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "A mirror",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "The Moon",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "A window",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-022",
+      "type": "multipleChoice",
+      "prompt": "Which organ pumps blood around your body?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Heart",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "Lungs",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "Stomach",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Brain",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-023",
+      "type": "multipleChoice",
+      "prompt": "What is the hardest natural material?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Diamond",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "Gold",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "Iron",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Glass",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-024",
+      "type": "multipleChoice",
+      "prompt": "Which of these animals hatches from an egg?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Crocodile",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "Cat",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "Cow",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Bat",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-025",
+      "type": "multipleChoice",
+      "prompt": "What force pulls things down towards the ground?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Gravity",
+          "isCorrect": true
+        },
+        {
+          "id": "b",
+          "text": "Magnetism",
+          "isCorrect": false
+        },
+        {
+          "id": "c",
+          "text": "Friction",
+          "isCorrect": false
+        },
+        {
+          "id": "d",
+          "text": "Wind",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-026",
+      "type": "trueFalse",
+      "prompt": "The Moon makes its own light.",
+      "options": [
+        {
+          "id": "true",
+          "text": "True",
+          "isCorrect": false
+        },
+        {
+          "id": "false",
+          "text": "False",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "id": "general-027",
+      "type": "trueFalse",
+      "prompt": "Penguins are birds.",
+      "options": [
+        {
+          "id": "true",
+          "text": "True",
+          "isCorrect": true
+        },
+        {
+          "id": "false",
+          "text": "False",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-028",
+      "type": "trueFalse",
+      "prompt": "Sound travels faster than light.",
+      "options": [
+        {
+          "id": "true",
+          "text": "True",
+          "isCorrect": false
+        },
+        {
+          "id": "false",
+          "text": "False",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "id": "general-029",
+      "type": "trueFalse",
+      "prompt": "A year has 12 months.",
+      "options": [
+        {
+          "id": "true",
+          "text": "True",
+          "isCorrect": true
+        },
+        {
+          "id": "false",
+          "text": "False",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-030",
+      "type": "trueFalse",
+      "prompt": "Bats are a kind of bird.",
+      "options": [
+        {
+          "id": "true",
+          "text": "True",
+          "isCorrect": false
+        },
+        {
+          "id": "false",
+          "text": "False",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "id": "general-031",
+      "type": "trueFalse",
+      "prompt": "Plants need sunlight to grow.",
+      "options": [
+        {
+          "id": "true",
+          "text": "True",
+          "isCorrect": true
+        },
+        {
+          "id": "false",
+          "text": "False",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "general-032",
+      "type": "trueFalse",
+      "prompt": "The Earth goes around the Sun.",
+      "options": [
+        {
+          "id": "true",
+          "text": "True",
+          "isCorrect": true
+        },
+        {
+          "id": "false",
+          "text": "False",
+          "isCorrect": false
+        }
+      ]
+    }
+  ]
+}

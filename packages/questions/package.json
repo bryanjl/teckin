@@ -5,7 +5,8 @@
   "description": "Question engine: deck, shuffle, grading, retry queue and answer events. Pure TypeScript.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./sample-sets/*": "./sample-sets/*"
   },
   "scripts": {
     "lint": "eslint .",
@@ -18,5 +19,8 @@
     "eslint": "10.12.0",
     "typescript": "6.0.3",
     "vitest": "5.0.3"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
   }
 }

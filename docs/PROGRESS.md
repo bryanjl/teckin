@@ -17,7 +17,8 @@ Each run takes the first unchecked milestone, finishes it, and ticks it. See `CL
 
 ## Phase 2: Questions power the climb
 
-- [ ] **M2.1 Questions package.** Question model, deck with retry rule, grading, answer events, full unit tests. Sample sets (maths, spelling, general knowledge; 30+ each).
+- [x] **M2.1 Questions package.** Question model, deck with retry rule, grading, answer events, full unit tests. Sample sets (maths, spelling, general knowledge; 30+ each).
+  - Done 2026-10-08. `@teckin/questions`: Zod question/set schemas, `PresentedQuestion` (no answers), seeded `QuestionDeck` (shuffled cycles, retry after 3 others), `gradeAnswer`, `AnswerLog` summary, `QuestionQuiz` tying them together; sample sets in `packages/questions/sample-sets/*.json` (39 maths, 34 spelling, 32 general knowledge).
 - [ ] **M2.2 Session and energy.** `GameSession` interface and `LocalSession`; energy meter, costs, zero-energy crawl, "Get energy" button; tunables in one config.
 - [ ] **M2.3 Question sheet and results UI.** Shared bottom sheet, feedback animations, results screen with missed questions, reduced motion, sound with mute.
 - [ ] **M2.4 Cogspire theme.** Full SVG theme pack (robot with colour variants, tiles, hazards, backgrounds per summit), made the default.
@@ -64,3 +65,5 @@ One line per run: date (UTC), milestone, outcome.
 - 2026-10-08 — M1.3 Art and themes — done (resvg atlas build at 1x/2x/3x with edge extrusion, theme manifest + loader with requirement checks, placeholder theme, scene and controls themed, CI browser-install timeout).
 - 2026-10-08 — M1.4 Platformer kit and summits 1–2 — done (pure fixed-step platformer simulation with one-way ledges, Tiled loader, summits 1–2 course, HUD, checkpoints, course-complete screen, bot-verified course in unit and E2E tests).
 - 2026-10-08 — M1.5 Phase 1 wrap-up — done (checkpoint and theme-swap E2E, web Bicep + manual deploy workflow + standalone package, phase-1 demo, self-review with 6 fixes).
+- 2026-10-08 — Bryan asked for all of Phase 2 in one session, overriding the one-milestone rule for this run.
+- 2026-10-08 — M2.1 Questions package — done.
