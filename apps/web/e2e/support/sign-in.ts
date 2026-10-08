@@ -1,3 +1,4 @@
+import { expect, type Page } from '@playwright/test';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -39,4 +40,19 @@ export async function readMagicLink(email: string, timeoutMs = 10_000): Promise<
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
   }
+}
+
+/**
+ * Signs up a new host by magic link in `page` and leaves it on the dashboard. Callers use
+ * {@link e2eSignInOrigin} as their base URL, as the sign-in tests do.
+ */
+export async function signUpHost(page: Page, label: string): Promise<string> {
+  const email = uniqueHostEmail(label);
+  await page.goto('/sign-in');
+  await page.getByLabel('Email address').fill(email);
+  await page.getByRole('button', { name: 'Email me a sign-in link' }).click();
+  await expect(page).toHaveURL(/\/sign-in\/check-email/);
+  await page.goto(await readMagicLink(email));
+  await expect(page).toHaveURL(/\/dashboard$/);
+  return email;
 }
