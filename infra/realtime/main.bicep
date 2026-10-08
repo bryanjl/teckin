@@ -20,7 +20,7 @@ param location string = resourceGroup().location
 @maxLength(10)
 param productName string = 'teckin'
 
-@description('Realtime processes (one Container App each). One process holds about 10 rooms of 30 comfortably; see docs/load-test.md.')
+@description('Realtime processes (one Container App each). At the measured load a 0.5 vCPU process holds about 10 rooms of 30 and a 1 vCPU process about 20; see docs/load-test.md.')
 @minValue(1)
 @maxValue(20)
 param shardCount int = 1

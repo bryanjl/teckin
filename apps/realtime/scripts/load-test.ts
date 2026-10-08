@@ -3,6 +3,8 @@
  *
  *   pnpm --filter realtime load-test                      # both Phase 3 scenarios
  *   pnpm --filter realtime load-test -- --scenario one-room --seconds 60
+ *   pnpm --filter realtime load-test -- --rooms 20 --bots 30   # a custom size
+ *   pnpm --filter realtime load-test -- --json results.json    # also write the results
  *   pnpm --filter realtime load-test -- --server http://127.0.0.1:2567 --secret <dev secret>
  *
  * Without `--server` it starts its own realtime process (in-memory presence, load metrics on)
@@ -14,6 +16,7 @@
  */
 import { spawn, type ChildProcess } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
+import { writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { Client, type Room as SdkRoom } from '@colyseus/sdk';
@@ -41,6 +44,9 @@ const { values: args } = parseArgs({
     server: { type: 'string' },
     secret: { type: 'string' },
     port: { type: 'string', default: '2590' },
+    rooms: { type: 'string' },
+    bots: { type: 'string' },
+    json: { type: 'string' },
   },
 });
 
@@ -61,8 +67,19 @@ interface LoadBot {
 }
 
 async function main(): Promise<void> {
-  const chosen =
-    args.scenario === 'all' ? Object.values(scenarios) : [scenarios[args.scenario ?? '']];
+  const custom: Scenario | null =
+    args.rooms || args.bots
+      ? {
+          name: 'custom',
+          rooms: Number(args.rooms ?? 1),
+          botsPerRoom: Number(args.bots ?? 30),
+        }
+      : null;
+  const chosen = custom
+    ? [custom]
+    : args.scenario === 'all'
+      ? Object.values(scenarios)
+      : [scenarios[args.scenario ?? '']];
   if (chosen.some((scenario) => !scenario)) {
     throw new Error(`Unknown scenario "${args.scenario}"; use one-room, many-rooms or all`);
   }
@@ -79,6 +96,7 @@ async function main(): Promise<void> {
   }
   console.info('\nResults (JSON):');
   console.info(JSON.stringify(results, null, 2));
+  if (args.json) await writeFile(args.json, JSON.stringify(results, null, 2));
   console.info(
     '\n| Scenario | Rooms × bots | Room tick p50 / p95 / p99 / max (ms) | Event loop p99 (ms) | Server CPU (% of a core) | Server RSS (MB) | Down per player (KB/s) | Reports per bot per s | Corrections |',
   );

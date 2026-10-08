@@ -14,7 +14,7 @@ export interface LoadMetricsReport {
   /** Process CPU time over the period, as a percentage of one core. */
   cpuPercentOfOneCore: number;
   memoryMegabytes: { rss: number; heapUsed: number };
-  /** How late timers ran: the whole process's responsiveness. */
+  /** How late a 10 ms timer ran (beyond its 10 ms): the whole process's responsiveness. */
   eventLoopDelayMs: { p50: number; p99: number; max: number };
 }
 
@@ -27,7 +27,11 @@ const nanosToMs = (nanos: number) => Math.round((nanos / 1e6) * 100) / 100;
  * Only registered when the server is started with load metrics on.
  */
 export function createLoadMetrics(workStats: RoomWorkStats) {
-  const eventLoop = monitorEventLoopDelay({ resolution: 10 });
+  const resolutionMs = 10;
+  const eventLoop = monitorEventLoopDelay({ resolution: resolutionMs });
+  // The histogram records whole timer intervals; the lag is what exceeds the resolution.
+  const lagMs = (nanos: number) =>
+    Math.max(0, Math.round((nanosToMs(nanos) - resolutionMs) * 100) / 100);
   eventLoop.enable();
   let periodStartedAt = performance.now();
   let cpuAtStart = process.cpuUsage();
@@ -46,9 +50,9 @@ export function createLoadMetrics(workStats: RoomWorkStats) {
         seconds > 0 ? Math.round(((cpu.user + cpu.system) / 1e6 / seconds) * 1000) / 10 : 0,
       memoryMegabytes: { rss: megabytes(memory.rss), heapUsed: megabytes(memory.heapUsed) },
       eventLoopDelayMs: {
-        p50: nanosToMs(eventLoop.percentile(50)),
-        p99: nanosToMs(eventLoop.percentile(99)),
-        max: nanosToMs(eventLoop.max),
+        p50: lagMs(eventLoop.percentile(50)),
+        p99: lagMs(eventLoop.percentile(99)),
+        max: lagMs(eventLoop.max),
       },
     };
     if (new URL(ctx.request?.url ?? '/', 'http://localhost').searchParams.has('reset')) {
