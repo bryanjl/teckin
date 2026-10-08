@@ -29,7 +29,7 @@ function detectSeparator(text: string): string {
  * match what a spreadsheet shows (a quoted cell may span lines and still counts as one row).
  */
 export function parseCsv(text: string): string[][] {
-  const source = text.startsWith('﻿') ? text.slice(1) : text;
+  const source = text.startsWith('\uFEFF') ? text.slice(1) : text;
   if (source.length === 0) return [];
   const separator = detectSeparator(source);
   const rows: string[][] = [];

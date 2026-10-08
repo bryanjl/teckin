@@ -18,6 +18,10 @@ const nextConfig: NextConfig = {
     '@teckin/ui',
   ],
   poweredByHeader: false,
+  experimental: {
+    // A full question set (up to 500 questions) is saved in one server action call.
+    serverActions: { bodySizeLimit: '2mb' },
+  },
   // The deploy workflow sets NEXT_OUTPUT=standalone to get a self-contained server for App
   // Service. Local runs and E2E keep the default output so `next start` works as usual.
   ...(process.env.NEXT_OUTPUT === 'standalone'

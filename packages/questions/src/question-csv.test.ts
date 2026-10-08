@@ -17,7 +17,7 @@ describe('parseCsv', () => {
   });
 
   it('skips a byte order mark and detects semicolon and tab separators', () => {
-    expect(parseCsv('﻿Question;Correct answer\nHi;1,5\n')).toEqual([
+    expect(parseCsv('\uFEFFQuestion;Correct answer\nHi;1,5\n')).toEqual([
       ['Question', 'Correct answer'],
       ['Hi', '1,5'],
     ]);
