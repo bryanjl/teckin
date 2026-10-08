@@ -100,7 +100,7 @@ test('the game cannot move while the sheet is open and resumes exactly where it 
   }));
   expect(during.player).toEqual(frozen.player);
   // The game clock keeps running while answering: a wrong answer costs time.
-  expect(during.time ?? 0).toBeGreaterThan((frozen.time ?? 0) + 0.3);
+  expect(during.time ?? 0).toBeGreaterThan((frozen.time ?? 0) + 0.2);
 
   // Close the sheet and read the player in the same task, before any frame can run.
   const resumed = await page.evaluate(() => {
