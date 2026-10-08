@@ -12,3 +12,4 @@ export * from './page/wake-lock';
 export * from './scaling';
 export * from './theme';
 export * from './format';
+export * from './sound/synth-sounds';

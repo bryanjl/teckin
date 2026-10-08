@@ -208,6 +208,26 @@ describe('stepPlatformer', () => {
     expect(buffered.jumpStep).toBeLessThanOrEqual(landStep + 1);
   });
 
+  it('blocks ground and air jumps when they are not allowed, and scales running speed', () => {
+    const blocked = run(standingAt(64), 30, (step) => ({
+      ...idle,
+      jumpHeld: step < 10,
+      jumpPressed: step === 0,
+      groundJumpAllowed: false,
+    }));
+    expect(blocked.events).not.toContain('jump');
+    const noAir = run(standingAt(64), 60, (step) => ({
+      ...idle,
+      jumpHeld: true,
+      jumpPressed: step === 0 || step === 20,
+      airJumpAllowed: false,
+    }));
+    expect(noAir.events).toContain('jump');
+    expect(noAir.events).not.toContain('airJump');
+    const crawl = run(standingAt(64), 120, { ...idle, right: true, speedScale: 0.25 });
+    expect(Math.abs(crawl.body.velocityX - tuning.runSpeed * 0.25)).toBeLessThan(1);
+  });
+
   it('ignores a jump pressed long before landing', () => {
     let body = standingAt(64);
     let jumps = 0;

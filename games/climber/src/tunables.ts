@@ -9,6 +9,12 @@ export interface ClimberTunables {
   jumpCost: number;
   doubleJumpCost: number;
   walkingCostPerTile: number;
+  /** Running speed multiplier at zero energy: a slow, free crawl to a safer spot. */
+  crawlSpeedScale: number;
+  /** The "Get energy" button pulses below this much energy. */
+  lowEnergyThreshold: number;
+  /** Energy the meter is drawn full at; more is allowed and shows as a full meter. */
+  energyMeterFull: number;
   /** Movement and world physics, in world pixels and seconds. */
   physics: ClimberPhysicsTunables;
   /** Total course height shown to players; each of the six summits is a sixth of it. */
@@ -42,6 +48,9 @@ export const defaultClimberTunables: Readonly<ClimberTunables> = Object.freeze({
   jumpCost: 10,
   doubleJumpCost: 15,
   walkingCostPerTile: 1,
+  crawlSpeedScale: 0.35,
+  lowEnergyThreshold: 20,
+  energyMeterFull: 200,
   courseHeightMetres: 1000,
   respawnOfferDropTiles: 3,
   physics: Object.freeze({

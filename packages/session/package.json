@@ -1,8 +1,8 @@
 {
-  "name": "@teckin/game-contracts",
+  "name": "@teckin/session",
   "version": "0.0.0",
   "private": true,
-  "description": "Shared game contract types: GameDefinition, room state base, messages and settings schemas.",
+  "description": "GameSession implementations: LocalSession for solo play now, NetworkSession in Phase 3.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
@@ -13,8 +13,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@teckin/questions": "workspace:*",
-    "zod": "4.6.5"
+    "@teckin/game-contracts": "workspace:*",
+    "@teckin/questions": "workspace:*"
   },
   "devDependencies": {
     "@teckin/config": "workspace:*",

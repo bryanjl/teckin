@@ -6,17 +6,9 @@ import {
   type PlatformerAction,
 } from '@teckin/engine-core';
 import { ThemeTextures, chooseThemeTextureScale } from '@teckin/engine-core/phaser';
-import {
-  CourseBot,
-  CourseProgress,
-  FixedStepper,
-  createPlatformerBody,
-  footOf,
-  stepPlatformer,
-  type PlatformerBody,
-  type PlatformerEvent,
-} from '@teckin/platformer-kit';
+import { CourseBot, FixedStepper, footOf, type PlatformerEvent } from '@teckin/platformer-kit';
 import type { ClimberCourse } from '../course/course';
+import { ClimberRun, type EnergyAccount } from '../run/climber-run';
 import type { ClimberTunables } from '../tunables';
 
 /** Which theme atlas the scene loaded, for the debug overlay and tests. */
@@ -51,6 +43,8 @@ export interface CourseHudState {
   /** Seconds of play so far (paused time excluded). */
   elapsedSeconds: number;
   finished: boolean;
+  /** True at zero energy, when the player crawls. */
+  crawling: boolean;
 }
 
 /** What the course scene needs from the page. */
@@ -58,6 +52,8 @@ export interface CourseSceneOptions {
   actions: ActionState<PlatformerAction>;
   tunables: ClimberTunables;
   course: ClimberCourse;
+  /** Energy source; jumps and walking spend from it. */
+  energy: EnergyAccount;
   /** Built theme pack whose atlas supplies every sprite. */
   theme: LoadedTheme;
   /** Atlas frame drawn for the player, e.g. `player-amber`. */
@@ -71,8 +67,15 @@ export interface CourseSceneOptions {
   onFrame: (state: CourseHudState) => void;
   /** Called when a ground or air jump happens, for haptics and sound. */
   onPlayerEvent?: (event: PlatformerEvent) => void;
+  /** Called when a summit is reached (0-based index). */
+  onSummit?: (summitIndex: number, elapsedSeconds: number) => void;
   /** Called once when the last summit is reached. */
   onComplete: (elapsedSeconds: number) => void;
+  /**
+   * When autopilot is on, called each frame before it moves; return true to hold still
+   * (for example while it tops up energy).
+   */
+  autopilotShouldWait?: () => boolean;
 }
 
 const autopilotSource = 'autopilot';
@@ -87,15 +90,12 @@ export class CourseScene extends Phaser.Scene {
   private themeTextures?: ThemeTextures;
   private playerArt!: Phaser.GameObjects.Image;
   private checkpointArt?: Phaser.GameObjects.Image;
-  private body!: PlatformerBody;
-  private previousBody!: PlatformerBody;
-  private progress!: CourseProgress;
+  private run!: ClimberRun;
   private stepper!: FixedStepper;
   private bot?: CourseBot;
   private pendingJumpPress = false;
-  private elapsedSeconds = 0;
-  private completed = false;
-  private jumpsUsed = 0;
+  /** While frozen (question sheet open), nothing moves and no time passes. */
+  private frozen = false;
 
   constructor(private readonly options: CourseSceneOptions) {
     super({ key: 'climber-course' });
@@ -103,25 +103,25 @@ export class CourseScene extends Phaser.Scene {
 
   /** Current player state. */
   snapshot(): PlayerSnapshot {
-    const body = this.body;
-    if (!body) return { x: 0, y: 0, velocityX: 0, velocityY: 0, onGround: false, jumpsUsed: 0 };
+    const run = this.run;
+    if (!run) return { x: 0, y: 0, velocityX: 0, velocityY: 0, onGround: false, jumpsUsed: 0 };
     const { bodyWidth, bodyHeight } = this.options.tunables.physics;
-    const jumpsUsed = this.jumpsUsed;
+    const body = run.body;
     return {
       x: Math.round(body.x + bodyWidth / 2),
       y: Math.round(body.y + bodyHeight / 2),
       velocityX: Math.round(body.velocityX),
       velocityY: Math.round(body.velocityY),
       onGround: body.onGround,
-      jumpsUsed,
+      jumpsUsed: run.jumpsUsed,
     };
   }
 
   /** HUD state right now. */
   hudState(): CourseHudState {
     const { course, tunables } = this.options;
-    const progress = this.progress;
-    if (!progress || !this.body) {
+    const run = this.run;
+    if (!run) {
       return {
         heightMetres: 0,
         summitIndex: 0,
@@ -129,21 +129,23 @@ export class CourseScene extends Phaser.Scene {
         canRespawn: false,
         elapsedSeconds: 0,
         finished: false,
+        crawling: false,
       };
     }
-    const foot = footOf(this.body, tunables.physics);
+    const progress = run.progress;
     return {
-      heightMetres: Math.max(0, Math.floor(course.heightAt(foot.y))),
+      heightMetres: Math.floor(run.heightMetres),
       summitIndex: Math.min(progress.goalsReached, course.summits.length - 1),
       summitsReached: progress.goalsReached,
       canRespawn:
-        !this.completed &&
+        !run.completed &&
         progress.isBelowCheckpoint(
-          foot.y,
+          run.foot.y,
           tunables.respawnOfferDropTiles * tunables.physics.tileSize,
         ),
-      elapsedSeconds: this.elapsedSeconds,
-      finished: this.completed,
+      elapsedSeconds: run.elapsedSeconds,
+      finished: run.completed,
+      crawling: run.crawling,
     };
   }
 
@@ -159,17 +161,9 @@ export class CourseScene extends Phaser.Scene {
 
   /** Puts the player back at the start with the clock and summits reset. */
   restartCourse(): void {
-    const { course, tunables } = this.options;
-    this.body = createPlatformerBody(course.spawn.x, course.spawn.y, tunables.physics);
-    this.previousBody = this.body;
-    this.progress.reset();
-    this.stepper.reset();
-    this.elapsedSeconds = 0;
-    this.completed = false;
-    this.pendingJumpPress = false;
-    this.jumpsUsed = 0;
+    this.run.restart();
+    this.afterTeleport();
     this.checkpointArt?.setVisible(false);
-    this.syncPlayerArt(1);
     this.cameras.main.centerOn(this.playerArt.x, this.playerArt.y);
   }
 
@@ -178,11 +172,8 @@ export class CourseScene extends Phaser.Scene {
    * they had fallen all the way down. Debug and test use only.
    */
   dropToStart(): void {
-    const { course, tunables } = this.options;
-    this.body = createPlatformerBody(course.spawn.x, course.spawn.y, tunables.physics);
-    this.previousBody = this.body;
-    this.stepper.reset();
-    this.syncPlayerArt(1);
+    this.run.dropToStart();
+    this.afterTeleport();
   }
 
   /** Turns the autopilot on or off mid-run. Debug and test use only. */
@@ -197,15 +188,29 @@ export class CourseScene extends Phaser.Scene {
 
   /** Moves the player to the saved checkpoint, if there is one. */
   respawnAtCheckpoint(): void {
-    const checkpoint = this.progress.checkpoint;
-    if (!checkpoint) return;
-    this.body = createPlatformerBody(
-      checkpoint.respawnX,
-      checkpoint.respawnY,
-      this.options.tunables.physics,
-    );
-    this.previousBody = this.body;
+    if (this.run.respawnAtCheckpoint()) this.afterTeleport();
+  }
+
+  /**
+   * Freezes or unfreezes the climb. While frozen the player stands still and cannot fall,
+   * the clock stops, and on unfreezing the run continues exactly where it was.
+   */
+  setFrozen(frozen: boolean): void {
+    if (this.frozen === frozen) return;
+    this.frozen = frozen;
+    this.pendingJumpPress = false;
+    this.stepper?.reset();
+    this.options.actions.releaseSource(autopilotSource);
+  }
+
+  /** True while frozen. */
+  get isFrozen(): boolean {
+    return this.frozen;
+  }
+
+  private afterTeleport(): void {
     this.stepper.reset();
+    this.pendingJumpPress = false;
     this.syncPlayerArt(1);
   }
 
@@ -241,10 +246,8 @@ export class CourseScene extends Phaser.Scene {
     }
 
     this.stepper = new FixedStepper(tunables.physics.fixedStep);
-    this.progress = new CourseProgress(course.summits, checkpointsEnabled);
+    this.run = new ClimberRun(course, tunables, this.options.energy, checkpointsEnabled);
     if (this.options.autopilot) this.bot = new CourseBot(map.grid, tunables.physics);
-    this.body = createPlatformerBody(course.spawn.x, course.spawn.y, tunables.physics);
-    this.previousBody = this.body;
     this.playerArt = textures.image(this, 0, 0, this.options.playerFrame).setOrigin(0.5, 1);
     this.syncPlayerArt(1);
 
@@ -265,11 +268,12 @@ export class CourseScene extends Phaser.Scene {
 
   override update(_time: number, deltaMs: number): void {
     const { actions } = this.options;
-    if (this.bot && !this.completed) this.driveAutopilot();
+    const run = this.run;
+    if (this.bot && !run.completed && !this.frozen) this.driveAutopilot();
     actions.beginFrame();
-    if (actions.justPressed('jump')) this.pendingJumpPress = true;
+    if (actions.justPressed('jump') && !this.frozen) this.pendingJumpPress = true;
 
-    if (!this.completed) {
+    if (!run.completed && !this.frozen) {
       const alpha = this.stepper.advance(deltaMs / 1000, () => this.step());
       this.syncPlayerArt(alpha);
     }
@@ -277,53 +281,46 @@ export class CourseScene extends Phaser.Scene {
   }
 
   private step(): void {
-    const { actions, tunables, course } = this.options;
-    const physics = tunables.physics;
-    const input = {
+    const { actions, tunables } = this.options;
+    const run = this.run;
+    const result = run.step({
       left: actions.isDown('moveLeft'),
       right: actions.isDown('moveRight'),
       jumpHeld: actions.isDown('jump'),
       jumpPressed: this.pendingJumpPress,
-    };
+    });
     this.pendingJumpPress = false;
-    this.previousBody = this.body;
-    const result = stepPlatformer(this.body, input, course.map.grid, physics, physics.fixedStep);
-    this.body = result.body;
-    this.elapsedSeconds += physics.fixedStep;
-    for (const event of result.events) {
-      if (event === 'jump') this.jumpsUsed = 1;
-      if (event === 'airJump') this.jumpsUsed += 1;
-      if (event === 'land') this.jumpsUsed = 0;
-      this.options.onPlayerEvent?.(event);
-    }
+    for (const event of result.events) this.options.onPlayerEvent?.(event);
 
-    const update = this.progress.update(
-      { x: this.body.x, y: this.body.y, width: physics.bodyWidth, height: physics.bodyHeight },
-      this.body.onGround,
-    );
-    if (update.reachedGoal !== undefined) {
-      const checkpoint = this.progress.checkpoint;
+    if (result.reachedSummit !== undefined) {
+      const checkpoint = run.progress.checkpoint;
       if (checkpoint && this.checkpointArt) {
         this.checkpointArt
-          .setPosition(checkpoint.respawnX - physics.tileSize, checkpoint.respawnY)
+          .setPosition(checkpoint.respawnX - tunables.physics.tileSize, checkpoint.respawnY)
           .setVisible(true);
       }
+      this.options.onSummit?.(result.reachedSummit, run.elapsedSeconds);
     }
-    if (update.finished && !this.completed) {
-      this.completed = true;
+    if (result.finished) {
       this.options.actions.releaseSource(autopilotSource);
-      this.options.onComplete(this.elapsedSeconds);
+      this.options.onComplete(run.elapsedSeconds);
     }
   }
 
   private driveAutopilot(): void {
     const { actions } = this.options;
-    const buttons = this.bot?.decide(this.body);
-    if (!buttons) return;
     const apply = (action: PlatformerAction, down: boolean): void => {
       if (down) actions.press(action, autopilotSource);
       else actions.release(action, autopilotSource);
     };
+    if (this.options.autopilotShouldWait?.()) {
+      apply('moveLeft', false);
+      apply('moveRight', false);
+      apply('jump', false);
+      return;
+    }
+    const buttons = this.bot?.decide(this.run.body);
+    if (!buttons) return;
     apply('moveLeft', buttons.left);
     apply('moveRight', buttons.right);
     apply('jump', buttons.jump);
@@ -368,10 +365,10 @@ export class CourseScene extends Phaser.Scene {
   /** Places the player art between the last two simulated states, `alpha` of the way. */
   private syncPlayerArt(alpha: number): void {
     const physics = this.options.tunables.physics;
-    const from = footOf(this.previousBody, physics);
-    const to = footOf(this.body, physics);
+    const from = footOf(this.run.previousBody, physics);
+    const to = footOf(this.run.body, physics);
     this.playerArt.setPosition(from.x + (to.x - from.x) * alpha, from.y + (to.y - from.y) * alpha);
-    this.playerArt.setFlipX(this.body.facing < 0);
+    this.playerArt.setFlipX(this.run.body.facing < 0);
   }
 
   private currentViewport(): ReturnType<typeof computeWorldViewport> {

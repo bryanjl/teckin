@@ -13,7 +13,11 @@ import {
   type LoadedTheme,
 } from '@teckin/engine-core';
 import { bindPauseToGame, bootPhaserGame } from '@teckin/engine-core/phaser';
-import type { ClientGameModule, ClientGameMountOptions } from '@teckin/game-contracts';
+import type {
+  ClientGameModule,
+  ClientGameMountOptions,
+  ShellAppearance,
+} from '@teckin/game-contracts';
 import { climberThemeRequirements, defaultClimberThemeId, resolveClimberThemeId } from '../theme';
 import { defaultClimberTunables } from '../tunables';
 import { bundledCourseMap, createClimberCourse } from '../course/course';
@@ -25,9 +29,11 @@ import {
 } from './course-scene';
 import { attachCourseHud } from './hud';
 import { attachPauseButton } from './pause-button';
+import { attachMuteButton } from './mute-button';
+import { createAutopilotAnswerer } from './autopilot-answerer';
 
 /** Lifecycle status written to the mount element's `data-game-status`. */
-export type ClimberGameStatus = 'loading' | 'running' | 'paused' | 'complete';
+export type ClimberGameStatus = 'loading' | 'running' | 'paused' | 'answering' | 'complete';
 
 /** Read-only hooks exposed on `window.__teckinGame` with `?debug=1`, for tests and tuning. */
 export interface ClimberDebugHooks {
@@ -37,6 +43,10 @@ export interface ClimberDebugHooks {
   heldActions: () => string[];
   status: () => ClimberGameStatus;
   fps: () => number;
+  /** Energy right now. */
+  energy: () => number;
+  /** The correct option for a question, when the shell offers its debug oracle. */
+  correctOptionFor: (questionId: string) => string | undefined;
   /** Turns the autopilot on or off. */
   setAutopilot: (enabled: boolean) => void;
   /** Sends the player back to the start, keeping summits and time, as after a long fall. */
@@ -96,9 +106,45 @@ async function mount(
     cleanups.push(holdScreenWakeLock(document));
     cleanups.push(attachKeyboardSource(window, actions, platformerKeyBindings));
 
+    const { shell } = options;
+    const { session, sound } = shell;
+    const energyWord = theme.manifest.names.energyWord;
+    const appearance: ShellAppearance = {
+      accent: colour('accent'),
+      panel: colour('panel'),
+      text: colour('text'),
+      textMuted: colour('text-muted'),
+      correct: colour('correct'),
+      wrong: colour('wrong'),
+      fontFamily,
+    };
+
     let complete = false;
+    let answering = false;
     const runningStatus = (): ClimberGameStatus =>
-      complete ? 'complete' : pauseController.isPaused ? 'paused' : 'running';
+      complete
+        ? 'complete'
+        : pauseController.isPaused
+          ? 'paused'
+          : answering
+            ? 'answering'
+            : 'running';
+
+    const openQuestions = async (): Promise<void> => {
+      if (answering || complete) return;
+      answering = true;
+      actions.releaseAll();
+      scene.setFrozen(true);
+      setStatus(runningStatus());
+      try {
+        await shell.openQuestionSheet({ energyWord, appearance });
+      } finally {
+        answering = false;
+        actions.releaseAll();
+        scene.setFrozen(false);
+        if (ready) setStatus(runningStatus());
+      }
+    };
 
     const hud = attachCourseHud(
       parent,
@@ -107,40 +153,104 @@ async function mount(
         text: colour('text'),
         textMuted: colour('text-muted'),
         panel: colour('panel'),
+        wrong: colour('wrong'),
         fontFamily,
         summitNames: theme.manifest.names.summitNames,
+        energyWord,
       },
       {
         onRespawn: () => scene.respawnAtCheckpoint(),
-        onPlayAgain: () => {
-          complete = false;
-          hud.hideComplete();
-          actions.releaseAll();
-          scene.restartCourse();
-          setStatus(runningStatus());
-        },
+        onGetEnergy: () => void openQuestions(),
       },
     );
     cleanups.push(hud.remove);
+    const showEnergy = (): void =>
+      hud.setEnergy({
+        energy: session.energy,
+        full: tunables.energyMeterFull,
+        low: tunables.lowEnergyThreshold,
+      });
+    showEnergy();
+    cleanups.push(session.onEnergyChange(showEnergy));
+
+    const autopilot = debug && options.flags.autopilot === '1';
+    const answerer =
+      autopilot && shell.debugCorrectOptionFor
+        ? createAutopilotAnswerer({
+            document,
+            correctOptionFor: shell.debugCorrectOptionFor,
+            energy: () => session.energy,
+            refillTo: tunables.energyMeterFull,
+          })
+        : undefined;
+    if (answerer) cleanups.push(answerer.stop);
+
+    const playAgain = (): void => {
+      shell.hideResults();
+      session.reset();
+      complete = false;
+      actions.releaseAll();
+      scene.restartCourse();
+      setStatus(runningStatus());
+    };
 
     const scene = new CourseScene({
       actions,
       tunables,
       course,
       theme,
+      energy: session,
       playerFrame: 'player-amber',
       checkpointsEnabled: options.flags.checkpoints === '1',
-      autopilot: debug && options.flags.autopilot === '1',
+      autopilot,
       onReady: () => {
         ready = true;
         setStatus(runningStatus());
       },
       onFrame: (state) => hud.update(state),
+      onPlayerEvent: (event) => {
+        if (event === 'jump' || event === 'airJump') {
+          sound.play('jump');
+          navigator.vibrate?.(8);
+        }
+        if (event === 'land') sound.play('land');
+      },
+      onSummit: (summitIndex, elapsedSeconds) => {
+        session.reportProgress({ type: 'goalReached', goalIndex: summitIndex, elapsedSeconds });
+        if (summitIndex < course.summits.length - 1) sound.play('summit');
+      },
       onComplete: (elapsedSeconds) => {
         complete = true;
         actions.releaseAll();
-        hud.showComplete(elapsedSeconds);
+        session.reportProgress({ type: 'finished', elapsedSeconds });
+        sound.play('finish');
+        const summits = course.summits.length;
+        shell.showResults(
+          {
+            title: 'Course complete',
+            elapsedSeconds,
+            stats: [
+              { label: 'Summits reached', value: `${summits} of ${summits}` },
+              {
+                label: 'Height',
+                value: `${Math.round(tunables.courseHeightMetres * (summits / 6))} m`,
+              },
+            ],
+            answers: session.answerSummary(),
+            appearance,
+          },
+          playAgain,
+        );
         setStatus(runningStatus());
+      },
+      autopilotShouldWait: () => {
+        if (!answerer) return false;
+        if (answering) return true;
+        if (answerer.needsEnergy()) {
+          void openQuestions();
+          return true;
+        }
+        return false;
       },
     });
     const booted = bootPhaserGame({
@@ -157,6 +267,14 @@ async function mount(
           iconSvg: ui[touchIconByAction[button.action]] ?? button.iconSvg,
         })),
         visibility: options.flags.touch === '1' ? 'always' : 'auto',
+      }),
+    );
+    cleanups.push(
+      attachMuteButton(parent, sound, {
+        soundOnSvg: ui['sound-on'] ?? '',
+        soundOffSvg: ui['sound-off'] ?? '',
+        text: colour('text'),
+        panel: colour('panel'),
       }),
     );
     cleanups.push(
@@ -187,6 +305,8 @@ async function mount(
         heldActions: () => actions.heldActions(),
         status: () => (parent.dataset.gameStatus as ClimberGameStatus | undefined) ?? 'loading',
         fps: () => Math.round(booted.game.loop.actualFps),
+        energy: () => session.energy,
+        correctOptionFor: (questionId) => shell.debugCorrectOptionFor?.(questionId),
         setAutopilot: (enabled) => scene.setAutopilot(enabled),
         dropToStart: () => scene.dropToStart(),
       };
@@ -205,6 +325,7 @@ async function mount(
             `input ${hooks.heldActions().join(' ') || '-'}`,
             `res ${booted.renderResolution}x art ${hooks.theme().textureScale}x ${hooks.theme().id}`,
             `summits ${hooks.course().summitsReached} time ${hooks.course().elapsedSeconds.toFixed(1)}`,
+            `energy ${session.energy}${hooks.course().crawling ? ' crawl' : ''}`,
           ];
         }),
       );

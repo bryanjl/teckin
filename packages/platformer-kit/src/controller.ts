@@ -36,6 +36,15 @@ export interface PlatformerInput {
   jumpHeld: boolean;
   /** Jump went down since the previous step. */
   jumpPressed: boolean;
+  /**
+   * Whether a ground jump may happen this step (default true). Games use this to gate jumps
+   * on a resource such as energy; a buffered press waits until it is allowed or expires.
+   */
+  groundJumpAllowed?: boolean;
+  /** Whether a mid-air jump may happen this step (default true). */
+  airJumpAllowed?: boolean;
+  /** Multiplies the top running speed, for example a slow crawl (default 1). */
+  speedScale?: number;
 }
 
 /** Full state of one character; plain data so it can be copied, sent or replayed. */
@@ -120,7 +129,7 @@ export function stepPlatformer(
   // Horizontal: accelerate toward the target speed.
   const direction = Number(input.right) - Number(input.left);
   if (direction !== 0) next.facing = direction < 0 ? -1 : 1;
-  const targetSpeed = direction * tuning.runSpeed;
+  const targetSpeed = direction * tuning.runSpeed * (input.speedScale ?? 1);
   const acceleration = body.onGround ? tuning.groundAcceleration : tuning.airAcceleration;
   next.velocityX = approach(body.velocityX, targetSpeed, acceleration * dt);
 
@@ -131,14 +140,21 @@ export function stepPlatformer(
     : Math.max(0, body.jumpBufferLeft - dt);
 
   const canGroundJump = body.onGround || next.coyoteLeft > 0;
-  if (next.jumpBufferLeft > 0 && canGroundJump) {
+  const groundJumpAllowed = input.groundJumpAllowed ?? true;
+  const airJumpAllowed = input.airJumpAllowed ?? true;
+  if (next.jumpBufferLeft > 0 && canGroundJump && groundJumpAllowed) {
     next.velocityY = -tuning.jumpVelocity;
     next.onGround = false;
     next.coyoteLeft = 0;
     next.jumpBufferLeft = 0;
     next.jumpRising = true;
     events.push('jump');
-  } else if (input.jumpPressed && !canGroundJump && body.airJumpsUsed < tuning.airJumps) {
+  } else if (
+    input.jumpPressed &&
+    !canGroundJump &&
+    airJumpAllowed &&
+    body.airJumpsUsed < tuning.airJumps
+  ) {
     next.velocityY = -tuning.airJumpVelocity;
     next.airJumpsUsed = body.airJumpsUsed + 1;
     next.jumpBufferLeft = 0;

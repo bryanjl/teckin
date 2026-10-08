@@ -1,4 +1,5 @@
 import type { ZodType } from 'zod';
+import type { ClientGameShell } from './shell';
 
 /** One row of a game's final ranking, used by the shared leaderboard and reports. */
 export interface PlayerRanking {
@@ -46,6 +47,8 @@ export interface ClientGameMountOptions {
    * to its own default, and a `theme` flag overrides it for previews.
    */
   themeId?: string;
+  /** Session, question sheet, results screen and sound, supplied by the app. */
+  shell: ClientGameShell;
 }
 
 /**

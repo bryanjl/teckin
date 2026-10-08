@@ -19,8 +19,10 @@ Each run takes the first unchecked milestone, finishes it, and ticks it. See `CL
 
 - [x] **M2.1 Questions package.** Question model, deck with retry rule, grading, answer events, full unit tests. Sample sets (maths, spelling, general knowledge; 30+ each).
   - Done 2026-10-08. `@teckin/questions`: Zod question/set schemas, `PresentedQuestion` (no answers), seeded `QuestionDeck` (shuffled cycles, retry after 3 others), `gradeAnswer`, `AnswerLog` summary, `QuestionQuiz` tying them together; sample sets in `packages/questions/sample-sets/*.json` (39 maths, 34 spelling, 32 general knowledge).
-- [ ] **M2.2 Session and energy.** `GameSession` interface and `LocalSession`; energy meter, costs, zero-energy crawl, "Get energy" button; tunables in one config.
-- [ ] **M2.3 Question sheet and results UI.** Shared bottom sheet, feedback animations, results screen with missed questions, reduced motion, sound with mute.
+- [x] **M2.2 Session and energy.** `GameSession` interface and `LocalSession`; energy meter, costs, zero-energy crawl, "Get energy" button; tunables in one config.
+  - Done 2026-10-08. `GameSession` and `ClientGameShell` in `game-contracts`; `LocalSession` in the new `@teckin/session` package; `ClimberRun` (pure run with energy) in `games/climber/src/run`; HUD energy meter doubles as the "Get energy" button and pulses below 20; `simulateClimb` plays a whole game headlessly. Lint forbids the climber importing `@teckin/questions` or `@teckin/session` outside tests.
+- [x] **M2.3 Question sheet and results UI.** Shared bottom sheet, feedback animations, results screen with missed questions, reduced motion, sound with mute.
+  - Done 2026-10-08. `QuestionSheet` and `ResultsScreen` (React, `@teckin/ui`) rendered by the play page through the shell; synthesised sounds with a remembered mute toggle (`createSynthSoundPlayer` in `engine-core`); `?set=` picks the sample set; the autopilot answers through the real sheet.
 - [ ] **M2.4 Cogspire theme.** Full SVG theme pack (robot with colour variants, tiles, hazards, backgrounds per summit), made the default.
 - [ ] **M2.5 Summits 3–6.** Maps and hazards (moving platforms, crumbling ledges, vents, timed barriers).
 - [ ] **M2.6 Balance and wrap-up.** Tuning panel, scripted bot playtests recorded in `docs/playtests.md`, all Phase 2 acceptance tests, `docs/demos/phase-2.md`, self-review and fixes.
@@ -67,3 +69,5 @@ One line per run: date (UTC), milestone, outcome.
 - 2026-10-08 — M1.5 Phase 1 wrap-up — done (checkpoint and theme-swap E2E, web Bicep + manual deploy workflow + standalone package, phase-1 demo, self-review with 6 fixes).
 - 2026-10-08 — Bryan asked for all of Phase 2 in one session, overriding the one-milestone rule for this run.
 - 2026-10-08 — M2.1 Questions package — done.
+- 2026-10-08 — M2.2 Session and energy — done.
+- 2026-10-08 — M2.3 Question sheet and results UI — done.

@@ -26,8 +26,8 @@ export const climberThemeRequirements: ThemeRequirements = {
     'checkpoint',
     'summit-marker',
   ],
-  ui: ['move-left', 'move-right', 'jump', 'pause'],
-  colours: ['background', 'accent', 'text', 'text-muted', 'panel'],
+  ui: ['move-left', 'move-right', 'jump', 'pause', 'sound-on', 'sound-off'],
+  colours: ['background', 'accent', 'text', 'text-muted', 'panel', 'correct', 'wrong'],
   summitCount: 6,
 };
 

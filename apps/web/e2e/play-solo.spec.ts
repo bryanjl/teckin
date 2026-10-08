@@ -238,14 +238,18 @@ test('the course can be climbed from the start to the top of summit 2', async ({
     })
     .toBeGreaterThanOrEqual(1);
   await expect(page.getByTestId('hud-summit')).toHaveText('Summit 2');
-  await expect(page.getByTestId('course-complete')).toBeVisible({ timeout: 120_000 });
+  await expect(page.getByTestId('results-screen')).toBeVisible({ timeout: 120_000 });
   await expect(page.getByTestId('game-root')).toHaveAttribute('data-game-status', 'complete');
-  await expect(page.getByTestId('course-time')).toHaveText(/^Time \d+:\d\d\.\d$/);
+  await expect(page.getByTestId('results-time')).toHaveText(/^Time \d+:\d\d\.\d$/);
+  // The autopilot answered questions through the real sheet to pay for the climb.
+  expect(Number(await page.getByTestId('result-questions-answered').textContent())).toBeGreaterThan(
+    0,
+  );
   const finish = await page.evaluate(() => window.__teckinGame?.course());
   expect(finish?.heightMetres).toBeGreaterThanOrEqual(333);
 
   await page.getByTestId('play-again-button').tap();
-  await expect(page.getByTestId('course-complete')).toBeHidden();
+  await expect(page.getByTestId('results-screen')).toBeHidden();
   await expect(page.getByTestId('game-root')).toHaveAttribute('data-game-status', 'running');
   const restarted = await page.evaluate(() => window.__teckinGame?.course());
   expect(restarted?.summitsReached).toBe(0);
