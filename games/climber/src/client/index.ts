@@ -32,6 +32,7 @@ import { attachCourseHud } from './hud';
 import { attachPauseButton } from './pause-button';
 import { attachMuteButton } from './mute-button';
 import { createAutopilotAnswerer } from './autopilot-answerer';
+import { ClimberLink } from '../run/climber-link';
 
 /** Lifecycle status written to the mount element's `data-game-status`. */
 export type ClimberGameStatus = 'loading' | 'running' | 'paused' | 'answering' | 'complete';
@@ -164,7 +165,9 @@ async function mount(
         energyWord,
       },
       {
-        onRespawn: () => scene.respawnAtCheckpoint(),
+        onRespawn: () => {
+          if (scene.respawnAtCheckpoint()) link?.reportRespawn();
+        },
         onGetEnergy: () => void openQuestions(),
       },
     );
@@ -192,8 +195,15 @@ async function mount(
         : undefined;
     if (answerer) cleanups.push(answerer.stop);
 
+    // In a multiplayer game the room owns the climb: position reports, corrections and the
+    // placement a rejoining device restores. The room decides the winner and ranking.
+    let link: ClimberLink | undefined;
+    const realtime = session.realtime;
+
     const playAgain = (): void => {
       shell.hideResults();
+      // A multiplayer game is not replayed from the device.
+      if (realtime) return;
       session.reset();
       complete = false;
       actions.releaseAll();
@@ -210,6 +220,16 @@ async function mount(
       playerFrame: 'player-amber',
       checkpointsEnabled: options.flags.checkpoints === '1',
       autopilot,
+      onRunCreated: (run) => {
+        if (!realtime) return;
+        link = new ClimberLink(run, realtime, { onCorrection: () => scene.syncAfterMove() });
+        cleanups.push(() => link?.dispose());
+        void link
+          .restore()
+          .then(() => scene.syncAfterMove())
+          .catch((error: unknown) => console.warn('Could not restore the position', error));
+      },
+      onStepped: (stepSeconds) => link?.afterStep(stepSeconds),
       onReady: () => {
         ready = true;
         setStatus(runningStatus());

@@ -74,6 +74,10 @@ export interface CourseSceneOptions {
   onSummit?: (summitIndex: number, elapsedSeconds: number) => void;
   /** Called once when the last summit is reached. */
   onComplete: (elapsedSeconds: number) => void;
+  /** Called once the run exists, for attaching it to a multiplayer room. */
+  onRunCreated?: (run: ClimberRun) => void;
+  /** Called after every simulation step with the step length in seconds. */
+  onStepped?: (stepSeconds: number) => void;
   /**
    * When autopilot is on, called each frame before it moves; return true to hold still
    * (for example while it tops up energy).
@@ -194,9 +198,16 @@ export class CourseScene extends Phaser.Scene {
     this.options.actions.releaseSource(autopilotSource);
   }
 
-  /** Moves the player to the saved checkpoint, if there is one. */
-  respawnAtCheckpoint(): void {
-    if (this.run.respawnAtCheckpoint()) this.afterTeleport();
+  /** Moves the player to the saved checkpoint, if there is one. Returns whether it did. */
+  respawnAtCheckpoint(): boolean {
+    const moved = this.run.respawnAtCheckpoint();
+    if (moved) this.afterTeleport();
+    return moved;
+  }
+
+  /** Redraws the player after something outside the scene moved them (a server correction). */
+  syncAfterMove(): void {
+    if (this.run && this.stepper) this.afterTeleport();
   }
 
   /**
@@ -256,6 +267,7 @@ export class CourseScene extends Phaser.Scene {
     this.stepper = new FixedStepper(tunables.physics.fixedStep);
     this.run = new ClimberRun(course, tunables, this.options.energy, checkpointsEnabled);
     if (this.options.autopilot) this.bot = createClimberBot(this.run);
+    this.options.onRunCreated?.(this.run);
     this.reducedMotion =
       typeof window !== 'undefined' &&
       window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
@@ -317,6 +329,7 @@ export class CourseScene extends Phaser.Scene {
       jumpPressed: this.pendingJumpPress,
     });
     this.pendingJumpPress = false;
+    this.options.onStepped?.(tunables.physics.fixedStep);
     for (const event of result.events) this.options.onPlayerEvent?.(event);
 
     if (result.reachedSummit !== undefined) {
