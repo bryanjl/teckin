@@ -83,128 +83,137 @@ async function mount(
   const pauseController = new PauseController();
   let ready = false;
 
-  cleanups.push(guardPlaySurface(document));
-  cleanups.push(holdScreenWakeLock(document));
-  cleanups.push(attachKeyboardSource(window, actions, platformerKeyBindings));
-
-  let complete = false;
-  const runningStatus = (): ClimberGameStatus =>
-    complete ? 'complete' : pauseController.isPaused ? 'paused' : 'running';
-
-  const hud = attachCourseHud(
-    parent,
-    {
-      accent: colour('accent'),
-      text: colour('text'),
-      textMuted: colour('text-muted'),
-      panel: colour('panel'),
-      fontFamily,
-      summitNames: theme.manifest.names.summitNames,
-    },
-    {
-      onRespawn: () => scene.respawnAtCheckpoint(),
-      onPlayAgain: () => {
-        complete = false;
-        hud.hideComplete();
-        actions.releaseAll();
-        scene.restartCourse();
-        setStatus(runningStatus());
-      },
-    },
-  );
-  cleanups.push(hud.remove);
-
-  const scene = new CourseScene({
-    actions,
-    tunables,
-    course,
-    theme,
-    playerFrame: 'player-amber',
-    checkpointsEnabled: options.flags.checkpoints === '1',
-    autopilot: debug && options.flags.autopilot === '1',
-    onReady: () => {
-      ready = true;
-      setStatus(runningStatus());
-    },
-    onFrame: (state) => hud.update(state),
-    onComplete: (elapsedSeconds) => {
-      complete = true;
-      actions.releaseAll();
-      hud.showComplete(elapsedSeconds);
-      setStatus(runningStatus());
-    },
-  });
-  const booted = bootPhaserGame({
-    parent,
-    scenes: [scene],
-    backgroundColor: colour('background'),
-  });
-  cleanups.push(booted.destroy);
-
-  cleanups.push(
-    attachTouchControls(parent, actions, {
-      buttons: platformerTouchButtons.map((button) => ({
-        ...button,
-        iconSvg: ui[touchIconByAction[button.action]] ?? button.iconSvg,
-      })),
-      visibility: options.flags.touch === '1' ? 'always' : 'auto',
-    }),
-  );
-  cleanups.push(
-    attachPauseButton(parent, pauseController, {
-      iconSvg: ui.pause ?? '',
-      accent: colour('accent'),
-      text: colour('text'),
-      panel: colour('panel'),
-      fontFamily,
-    }),
-  );
-
-  cleanups.push(bindPauseToGame(booted.game, pauseController));
-  cleanups.push(
-    pauseController.onChange(() => {
-      // A finger lifted while paused never reaches the button, so start clean on resume.
-      actions.releaseAll();
-      if (ready) setStatus(runningStatus());
-    }),
-  );
-  cleanups.push(pauseWhenHidden(document, pauseController));
-
-  if (debug) {
-    const hooks: ClimberDebugHooks = {
-      player: () => scene.snapshot(),
-      theme: () => scene.themeSnapshot(),
-      course: () => scene.hudState(),
-      heldActions: () => actions.heldActions(),
-      status: () => (parent.dataset.gameStatus as ClimberGameStatus | undefined) ?? 'loading',
-      fps: () => Math.round(booted.game.loop.actualFps),
-      setAutopilot: (enabled) => scene.setAutopilot(enabled),
-      dropToStart: () => scene.dropToStart(),
-    };
-    window.__teckinGame = hooks;
-    cleanups.push(() => {
-      delete window.__teckinGame;
-    });
-    cleanups.push(
-      attachDebugOverlay(parent, () => {
-        const player = hooks.player();
-        return [
-          `fps ${hooks.fps()}`,
-          `x ${player.x} y ${player.y}`,
-          `vx ${player.velocityX} vy ${player.velocityY}`,
-          `ground ${player.onGround ? 'yes' : 'no'} jumps ${player.jumpsUsed}`,
-          `input ${hooks.heldActions().join(' ') || '-'}`,
-          `res ${booted.renderResolution}x art ${hooks.theme().textureScale}x ${hooks.theme().id}`,
-          `summits ${hooks.course().summitsReached} time ${hooks.course().elapsedSeconds.toFixed(1)}`,
-        ];
-      }),
-    );
-  }
-
-  return () => {
+  const teardown = (): void => {
     for (const cleanup of cleanups.reverse()) cleanup();
+    cleanups.length = 0;
     delete parent.dataset.gameStatus;
   };
+
+  // If any step below throws (no WebGL, say), undo the steps already taken so the page is
+  // not left locked, holding the wake lock or listening for keys behind the error message.
+  try {
+    cleanups.push(guardPlaySurface(document));
+    cleanups.push(holdScreenWakeLock(document));
+    cleanups.push(attachKeyboardSource(window, actions, platformerKeyBindings));
+
+    let complete = false;
+    const runningStatus = (): ClimberGameStatus =>
+      complete ? 'complete' : pauseController.isPaused ? 'paused' : 'running';
+
+    const hud = attachCourseHud(
+      parent,
+      {
+        accent: colour('accent'),
+        text: colour('text'),
+        textMuted: colour('text-muted'),
+        panel: colour('panel'),
+        fontFamily,
+        summitNames: theme.manifest.names.summitNames,
+      },
+      {
+        onRespawn: () => scene.respawnAtCheckpoint(),
+        onPlayAgain: () => {
+          complete = false;
+          hud.hideComplete();
+          actions.releaseAll();
+          scene.restartCourse();
+          setStatus(runningStatus());
+        },
+      },
+    );
+    cleanups.push(hud.remove);
+
+    const scene = new CourseScene({
+      actions,
+      tunables,
+      course,
+      theme,
+      playerFrame: 'player-amber',
+      checkpointsEnabled: options.flags.checkpoints === '1',
+      autopilot: debug && options.flags.autopilot === '1',
+      onReady: () => {
+        ready = true;
+        setStatus(runningStatus());
+      },
+      onFrame: (state) => hud.update(state),
+      onComplete: (elapsedSeconds) => {
+        complete = true;
+        actions.releaseAll();
+        hud.showComplete(elapsedSeconds);
+        setStatus(runningStatus());
+      },
+    });
+    const booted = bootPhaserGame({
+      parent,
+      scenes: [scene],
+      backgroundColor: colour('background'),
+    });
+    cleanups.push(booted.destroy);
+
+    cleanups.push(
+      attachTouchControls(parent, actions, {
+        buttons: platformerTouchButtons.map((button) => ({
+          ...button,
+          iconSvg: ui[touchIconByAction[button.action]] ?? button.iconSvg,
+        })),
+        visibility: options.flags.touch === '1' ? 'always' : 'auto',
+      }),
+    );
+    cleanups.push(
+      attachPauseButton(parent, pauseController, {
+        iconSvg: ui.pause ?? '',
+        accent: colour('accent'),
+        text: colour('text'),
+        panel: colour('panel'),
+        fontFamily,
+      }),
+    );
+
+    cleanups.push(bindPauseToGame(booted.game, pauseController));
+    cleanups.push(
+      pauseController.onChange(() => {
+        // A finger lifted while paused never reaches the button, so start clean on resume.
+        actions.releaseAll();
+        if (ready) setStatus(runningStatus());
+      }),
+    );
+    cleanups.push(pauseWhenHidden(document, pauseController));
+
+    if (debug) {
+      const hooks: ClimberDebugHooks = {
+        player: () => scene.snapshot(),
+        theme: () => scene.themeSnapshot(),
+        course: () => scene.hudState(),
+        heldActions: () => actions.heldActions(),
+        status: () => (parent.dataset.gameStatus as ClimberGameStatus | undefined) ?? 'loading',
+        fps: () => Math.round(booted.game.loop.actualFps),
+        setAutopilot: (enabled) => scene.setAutopilot(enabled),
+        dropToStart: () => scene.dropToStart(),
+      };
+      window.__teckinGame = hooks;
+      cleanups.push(() => {
+        delete window.__teckinGame;
+      });
+      cleanups.push(
+        attachDebugOverlay(parent, () => {
+          const player = hooks.player();
+          return [
+            `fps ${hooks.fps()}`,
+            `x ${player.x} y ${player.y}`,
+            `vx ${player.velocityX} vy ${player.velocityY}`,
+            `ground ${player.onGround ? 'yes' : 'no'} jumps ${player.jumpsUsed}`,
+            `input ${hooks.heldActions().join(' ') || '-'}`,
+            `res ${booted.renderResolution}x art ${hooks.theme().textureScale}x ${hooks.theme().id}`,
+            `summits ${hooks.course().summitsReached} time ${hooks.course().elapsedSeconds.toFixed(1)}`,
+          ];
+        }),
+      );
+    }
+  } catch (error) {
+    teardown();
+    throw error;
+  }
+  return teardown;
 }
 
 /**

@@ -68,4 +68,20 @@ describe('guardPlaySurface', () => {
     document.dispatchEvent(laterMenu);
     expect(laterMenu.defaultPrevented).toBe(false);
   });
+
+  it('blocks a quick second tap for zoom, but never on a button, so its click still fires', () => {
+    const restore = guardPlaySurface(document);
+    const quickTaps = (target: EventTarget): boolean => {
+      target.dispatchEvent(new Event('touchend', { cancelable: true, bubbles: true }));
+      const second = new Event('touchend', { cancelable: true, bubbles: true });
+      target.dispatchEvent(second);
+      return second.defaultPrevented;
+    };
+    expect(quickTaps(document.body)).toBe(true);
+    const button = document.createElement('button');
+    document.body.append(button);
+    expect(quickTaps(button)).toBe(false);
+    button.remove();
+    restore();
+  });
 });

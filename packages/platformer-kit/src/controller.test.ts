@@ -182,6 +182,32 @@ describe('stepPlatformer', () => {
     expect(landedJump).toBe(true);
   });
 
+  it('keeps a jump press about 80 ms before landing (jump buffer near its full length)', () => {
+    // Jump at step 0, air jump at step 30, then fall back to the floor.
+    const pressAt = (extra: number | undefined) => (step: number) => {
+      const pressed = step === 0 || step === 30 || step === extra;
+      return { ...idle, jumpHeld: pressed, jumpPressed: pressed };
+    };
+    const playOut = (extra: number | undefined): { landStep: number; jumpStep: number } => {
+      let body = standingAt(64);
+      let landStep = -1;
+      let jumpStep = -1;
+      for (let step = 0; step < 400; step += 1) {
+        const result = stepPlatformer(body, pressAt(extra)(step), grid, tuning, dt);
+        body = result.body;
+        if (step > 30 && landStep < 0 && result.events.includes('land')) landStep = step;
+        if (step > 30 && jumpStep < 0 && result.events.includes('jump')) jumpStep = step;
+      }
+      return { landStep, jumpStep };
+    };
+    const { landStep } = playOut(undefined);
+    expect(landStep).toBeGreaterThan(40);
+    const bufferedSteps = Math.round(0.08 / dt);
+    const buffered = playOut(landStep - bufferedSteps);
+    expect(buffered.jumpStep).toBeGreaterThanOrEqual(landStep);
+    expect(buffered.jumpStep).toBeLessThanOrEqual(landStep + 1);
+  });
+
   it('ignores a jump pressed long before landing', () => {
     let body = standingAt(64);
     let jumps = 0;

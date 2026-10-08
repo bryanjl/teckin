@@ -37,7 +37,12 @@ export function guardPlaySurface(document: Document): () => void {
   let lastTouchEnd = 0;
   const preventDoubleTapZoom = (event: Event): void => {
     const now = event.timeStamp;
-    if (now - lastTouchEnd < 350 && event.cancelable) event.preventDefault();
+    // Cancelling a touchend also cancels its click, so never do it on a button: a quick tap
+    // on Pause right after lifting off Jump must still work. Buttons opt out of double-tap
+    // zoom with `touch-action` instead.
+    const target = event.target as Element | null;
+    const onButton = typeof target?.closest === 'function' && target.closest('button') !== null;
+    if (!onButton && now - lastTouchEnd < 350 && event.cancelable) event.preventDefault();
     lastTouchEnd = now;
   };
 

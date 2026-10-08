@@ -123,6 +123,15 @@ export function bindPauseToGame(game: Phaser.Game, controller: PauseController):
     }
   };
   const unsubscribe = controller.onChange((paused) => apply(paused));
+  // A scene that was still loading (or not yet booted) when the pause began starts running
+  // later; catch it before its first update.
+  const pauseLateScenes = (): void => {
+    if (controller.isPaused && game.scene.getScenes(true).length > 0) apply(true);
+  };
+  game.events.on(Phaser.Core.Events.PRE_STEP, pauseLateScenes);
   if (controller.isPaused) apply(true);
-  return unsubscribe;
+  return () => {
+    unsubscribe();
+    game.events.off(Phaser.Core.Events.PRE_STEP, pauseLateScenes);
+  };
 }

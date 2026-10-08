@@ -26,7 +26,7 @@ param appInsightsConnectionString string
 @description('The Front Door profile id (its `frontDoorId` property) allowed to call the site.')
 param frontDoorId string
 
-@description('Extra app settings, e.g. NEXT_PUBLIC_CLIMBER_THEME.')
+@description('Extra runtime app settings. NEXT_PUBLIC_* values do nothing here: Next.js bakes them in at build time.')
 param extraAppSettings object = {}
 
 resource plan 'Microsoft.Web/serverfarms@2024-04-01' = {

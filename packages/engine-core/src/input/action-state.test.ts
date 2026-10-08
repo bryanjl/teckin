@@ -64,6 +64,15 @@ describe('ActionState', () => {
     expect(state.heldActions()).toEqual([]);
   });
 
+  it('forgets presses made since the last frame when everything is released', () => {
+    const state = new ActionState(['jump'] as const);
+    state.press('jump', 'keyboard');
+    state.releaseAll();
+    state.beginFrame();
+    expect(state.justPressed('jump')).toBe(false);
+    expect(state.justReleased('jump')).toBe(false);
+  });
+
   it('rejects unknown actions', () => {
     const state = new ActionState(['fire'] as const);
     expect(() => state.press('jump' as 'fire', 'x')).toThrow(/Unknown action/);

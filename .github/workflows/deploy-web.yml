@@ -34,14 +34,21 @@ jobs:
     # A GitHub environment per target lets Bryan add required reviewers before prod deploys.
     environment: ${{ inputs.environment }}
     steps:
+      - name: Check branch
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Deploy from main only (this run is on ${{ github.ref }})."
+          exit 1
+
       - name: Check configuration
         env:
           CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
           TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          DEPLOY_PRINCIPAL_ID: ${{ vars.AZURE_DEPLOY_PRINCIPAL_ID }}
         run: |
-          for name in CLIENT_ID TENANT_ID SUBSCRIPTION_ID RESOURCE_GROUP; do
+          for name in CLIENT_ID TENANT_ID SUBSCRIPTION_ID RESOURCE_GROUP DEPLOY_PRINCIPAL_ID; do
             if [ -z "${!name}" ]; then
               echo "::error::Repository variable AZURE_${name} is not set for this environment. See infra/README.md."
               exit 1
@@ -57,6 +64,8 @@ jobs:
 
       # Hoisted node_modules so the standalone server has plain folders, not pnpm symlinks.
       - run: pnpm install --frozen-lockfile --config.node-linker=hoisted
+      # Never ship what CI would reject.
+      - run: pnpm check
       - run: pnpm build
         env:
           NEXT_OUTPUT: standalone
@@ -84,14 +93,22 @@ jobs:
           echo "site_url=$(echo "$outputs" | jq -r .siteUrl.value)" >> "$GITHUB_OUTPUT"
 
       - name: Upload game assets
+        # A new role assignment can take a few minutes to apply, so retry on the first deploy.
         run: |
-          az storage blob upload-batch \
-            --account-name "${{ steps.infra.outputs.storage }}" \
-            --auth-mode login \
-            --destination game-assets \
-            --source apps/web/public/game-assets \
-            --overwrite \
-            --content-cache-control "public, max-age=86400"
+          for attempt in $(seq 1 10); do
+            if az storage blob upload-batch \
+              --account-name "${{ steps.infra.outputs.storage }}" \
+              --auth-mode login \
+              --destination game-assets \
+              --source apps/web/public/game-assets \
+              --overwrite \
+              --content-cache-control "public, max-age=86400"; then
+              exit 0
+            fi
+            echo "Upload failed (attempt $attempt); waiting for the blob role to apply"
+            sleep 30
+          done
+          exit 1
 
       - name: Deploy web app
         uses: azure/webapps-deploy@v3

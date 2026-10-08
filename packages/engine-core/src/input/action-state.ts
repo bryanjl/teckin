@@ -51,6 +51,11 @@ export class ActionState<Action extends string> {
     for (const action of this.actions) {
       for (const sourceId of [...this.sourcesFor(action)]) this.release(action, sourceId);
     }
+    // A press made while paused must not fire on the first frame after resuming.
+    this.pressedSinceLastFrame.clear();
+    this.releasedSinceLastFrame.clear();
+    this.justPressedThisFrame.clear();
+    this.justReleasedThisFrame.clear();
   }
 
   /** True while any source holds `action`. */

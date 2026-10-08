@@ -24,9 +24,8 @@ param webSkuName string = 'B1'
 @maxValue(10)
 param webInstanceCount int = 1
 
-@description('Theme pack the Climber game uses by default.')
-param climberTheme string = 'placeholder'
-
+// The Climber theme is not a parameter: Next.js bakes NEXT_PUBLIC_* values in at build time,
+// so the deploy workflow sets it from the CLIMBER_THEME variable.
 @description('Object id of the deploy identity. When set, it may upload game assets.')
 param deployPrincipalId string = ''
 
@@ -73,9 +72,6 @@ module web '../modules/web-app.bicep' = {
     instanceCount: webInstanceCount
     appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
     frontDoorId: frontDoor.properties.frontDoorId
-    extraAppSettings: {
-      NEXT_PUBLIC_CLIMBER_THEME: climberTheme
-    }
   }
 }
 
