@@ -187,25 +187,27 @@ enum GameSessionStatus {
 }
 
 model GameSession {
-  id                String            @id @default(uuid(7))
-  organisationId    String
+  id                  String            @id @default(uuid(7))
+  organisationId      String
   /// The registered GameDefinition id, e.g. "climber".
-  gameType          String
+  gameType            String
   /// The set the game was launched from; the questions themselves live in questionSnapshot.
-  questionSetId     String?
+  questionSetId       String?
   /// Validated by the game's Zod settings schema.
-  settings          Json
+  settings            Json
   /// The question set as it was at launch, so editing the set never changes past reports.
-  questionSnapshot  Json
+  questionSnapshot    Json
   /// Unique only while the game is live: cleared when the game ends (NULLs never collide).
-  joinCode          String?           @unique
-  status            GameSessionStatus @default(lobby)
-  hostUserId        String?
+  joinCode            String?           @unique
+  status              GameSessionStatus @default(lobby)
+  hostUserId          String?
   /// The realtime room holding the live game.
-  roomId            String?
-  createdAt         DateTime          @default(now())
-  startedAt         DateTime?
-  endedAt           DateTime?
+  roomId              String?
+  createdAt           DateTime          @default(now())
+  startedAt           DateTime?
+  endedAt             DateTime?
+  /// When the retention job deleted this game's players, answers and results (the game stays).
+  playerDataDeletedAt DateTime?
 
   organisation       Organisation        @relation(fields: [organisationId], references: [id], onDelete: Cascade)
   questionSet        QuestionSet?        @relation(fields: [questionSetId], references: [id], onDelete: SetNull)
@@ -216,17 +218,19 @@ model GameSession {
 
   @@unique([id, organisationId])
   @@index([organisationId, createdAt])
+  @@index([status, createdAt])
+  @@index([endedAt])
 }
 
 /// A player in one game. No personal data: a nickname and a hashed reconnect token only.
 model Participant {
-  id                  String    @id @default(uuid(7))
-  organisationId      String
-  gameSessionId       String
-  nickname            String
-  reconnectTokenHash  String?
-  joinedAt            DateTime  @default(now())
-  removedAt           DateTime?
+  id                 String    @id @default(uuid(7))
+  organisationId     String
+  gameSessionId      String
+  nickname           String
+  reconnectTokenHash String?
+  joinedAt           DateTime  @default(now())
+  removedAt          DateTime?
 
   organisation Organisation       @relation(fields: [organisationId], references: [id], onDelete: Cascade)
   gameSession  GameSession        @relation(fields: [gameSessionId, organisationId], references: [id, organisationId], onDelete: Cascade)
@@ -273,4 +277,17 @@ model ParticipantResult {
   @@id([gameSessionId, participantId])
   @@unique([participantId, organisationId])
   @@index([organisationId])
+}
+
+// ---------------------------------------------------------------------------
+// Platform
+// ---------------------------------------------------------------------------
+
+/// One fixed rate-limit window (sign-in attempts). Keys are hashed; nothing personal is stored.
+model RateLimitWindow {
+  key           String   @id
+  windowStartAt DateTime
+  count         Int
+
+  @@index([windowStartAt])
 }

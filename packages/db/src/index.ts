@@ -16,9 +16,41 @@ export {
   type OrganisationData,
   type QuestionInput,
   type QuestionSetContent,
+  type GameReportWithGame,
   type QuestionSnapshot,
   type SnapshotQuestion,
 } from './organisation-data';
+export {
+  buildGameReport,
+  formatAccuracy,
+  type GameReport,
+  type GameReportInput,
+  type OptionReportRow,
+  type PlayerReportRow,
+  type QuestionReportRow,
+} from './game-report';
+export {
+  checkPlanAllows,
+  planLimitsFromTable,
+  playersAllowedInGame,
+  unlimitedPlanLimits,
+  type CountedResource,
+  type PlanAllowance,
+  type PlanCheck,
+  type PlanLimits,
+} from './plan-limits';
+export {
+  consumeRateLimit,
+  defaultPlayerDataRetentionMonths,
+  deleteAccount,
+  monthsBefore,
+  rateLimitKey,
+  runDataRetention,
+  storeLiveJoinCode,
+  type DataRetentionOptions,
+  type DataRetentionSummary,
+  type RateLimitDecision,
+} from './platform';
 export {
   createHostWithPersonalOrganisation,
   findMembership,

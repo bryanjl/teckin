@@ -11,6 +11,7 @@ const tablesWithoutOrganisation = new Set([
   'VerificationToken',
   'Organisation',
   '_prisma_migrations',
+  'RateLimitWindow',
 ]);
 
 describeWithDatabase('database schema', (getDatabase) => {

@@ -1,4 +1,5 @@
 import type { PrismaClient } from './client';
+import { buildGameReport, type GameReport } from './game-report';
 import { Prisma } from './generated/prisma/client';
 import type { GameSessionStatus, QuestionType } from './generated/prisma/enums';
 
@@ -204,6 +205,8 @@ export function organisationData(database: PrismaClient, organisationId: string)
             _count: { select: { questions: true } },
           },
         }),
+      /** How many sets the organisation has (for plan limits). */
+      count: () => database.questionSet.count({ where: inOrganisation }),
       /** One set with its questions and options in order, or null. */
       get: (questionSetId: string) =>
         database.questionSet.findFirst({
@@ -392,14 +395,46 @@ export function organisationData(database: PrismaClient, organisationId: string)
             data: { status: 'playing', startedAt },
           }),
         ),
-      /** Ends the game and frees its join code for reuse. */
+      /**
+       * Ends the game, frees its join code for reuse and forgets its players' reconnect tokens
+       * (they expire with the game). Ending an already ended game keeps its first end time.
+       */
       markEnded: (gameSessionId: string, endedAt = new Date()) =>
-        orNotFound('GameSession', () =>
-          database.gameSession.update({
+        database.$transaction(async (transaction) => {
+          const game = await transaction.gameSession.findFirst({
             where: { id: gameSessionId, ...inOrganisation },
-            data: { status: 'ended', endedAt, joinCode: null },
-          }),
-        ),
+            select: { endedAt: true },
+          });
+          if (!game) throw new RecordNotFoundError('GameSession');
+          await transaction.participant.updateMany({
+            where: { gameSessionId, ...inOrganisation, reconnectTokenHash: { not: null } },
+            data: { reconnectTokenHash: null },
+          });
+          return transaction.gameSession.update({
+            where: { id: gameSessionId },
+            data: { status: 'ended', endedAt: game.endedAt ?? endedAt, joinCode: null },
+          });
+        }),
+      /** Games not yet ended (for plan limits). */
+      countLive: () =>
+        database.gameSession.count({ where: { ...inOrganisation, status: { not: 'ended' } } }),
+      /** Finished games, most recently ended first, for the Past games list. */
+      listPast: (filter: { take?: number } = {}) =>
+        database.gameSession.findMany({
+          where: { ...inOrganisation, status: 'ended' },
+          orderBy: [{ endedAt: 'desc' }, { createdAt: 'desc' }],
+          take: filter.take ?? 100,
+          select: {
+            id: true,
+            gameType: true,
+            createdAt: true,
+            startedAt: true,
+            endedAt: true,
+            playerDataDeletedAt: true,
+            questionSet: { select: { title: true } },
+            _count: { select: { participants: true } },
+          },
+        }),
       delete: (gameSessionId: string) =>
         orNotFound('GameSession', () =>
           database.gameSession.delete({ where: { id: gameSessionId, ...inOrganisation } }),
@@ -471,6 +506,18 @@ export function organisationData(database: PrismaClient, organisationId: string)
             });
           }),
         ),
+      /** Stores or replaces one player's final placing. */
+      record: (gameSessionId: string, result: NewParticipantResult) =>
+        orNotFound('Participant', () =>
+          database.participantResult.upsert({
+            where: {
+              gameSessionId_participantId: { gameSessionId, participantId: result.participantId },
+              ...inOrganisation,
+            },
+            create: { ...inOrganisation, gameSessionId, ...result },
+            update: { rank: result.rank, gameStats: result.gameStats },
+          }),
+        ),
       listForGame: (gameSessionId: string) =>
         database.participantResult.findMany({
           where: { gameSessionId, ...inOrganisation },
@@ -478,7 +525,75 @@ export function organisationData(database: PrismaClient, organisationId: string)
           include: { participant: { select: { nickname: true } } },
         }),
     },
+
+    reports: {
+      /**
+       * A game's report built from its recorded players, answers and results, with the game's
+       * details; null when the game is not in this organisation.
+       */
+      forGame: async (gameSessionId: string): Promise<GameReportWithGame | null> => {
+        const game = await database.gameSession.findFirst({
+          where: { id: gameSessionId, ...inOrganisation },
+          select: {
+            id: true,
+            gameType: true,
+            status: true,
+            createdAt: true,
+            startedAt: true,
+            endedAt: true,
+            playerDataDeletedAt: true,
+            questionSnapshot: true,
+          },
+        });
+        if (!game) return null;
+        const where = { gameSessionId, ...inOrganisation };
+        const [participants, answers, results] = await Promise.all([
+          database.participant.findMany({
+            where,
+            orderBy: { joinedAt: 'asc' },
+            select: { id: true, nickname: true, removedAt: true },
+          }),
+          database.answerEvent.findMany({
+            where,
+            orderBy: { createdAt: 'asc' },
+            select: {
+              participantId: true,
+              questionId: true,
+              chosenOptionId: true,
+              isCorrect: true,
+              millisecondsTaken: true,
+            },
+          }),
+          database.participantResult.findMany({
+            where,
+            select: { participantId: true, rank: true, gameStats: true },
+          }),
+        ]);
+        const snapshot = game.questionSnapshot as unknown as QuestionSnapshot;
+        const { questionSnapshot: _snapshot, ...details } = game;
+        return {
+          game: { ...details, questionSetTitle: snapshot.title },
+          report: buildGameReport({ snapshot, participants, answers, results }),
+        };
+      },
+    },
   };
+}
+
+/** A report with the details of the game it is for. */
+export interface GameReportWithGame {
+  game: {
+    id: string;
+    gameType: string;
+    status: GameSessionStatus;
+    createdAt: Date;
+    startedAt: Date | null;
+    endedAt: Date | null;
+    playerDataDeletedAt: Date | null;
+    /** The set's title as it was when the game launched. */
+    questionSetTitle: string;
+  };
+  report: GameReport;
 }
 
 /** The organisation-scoped data access returned by {@link organisationData}. */
