@@ -17,3 +17,4 @@ test-results/
 next-env.d.ts
 apps/web/public/game-assets/
 apps/web/.deploy/
+dump.rdb
