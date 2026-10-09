@@ -1,5 +1,5 @@
 import type { Room as SdkRoom } from '@colyseus/sdk';
-import { clientRequestTypes, type WelcomeMessage } from '@teckin/game-contracts';
+import { clientRequestTypes, wrongAnswerLockMs, type WelcomeMessage } from '@teckin/game-contracts';
 import type { CourseBot } from '@teckin/platformer-kit';
 import { NetworkSession, sdkRoomConnection, type SdkRoomLike } from '@teckin/session';
 import { bundledCourseMap, createClimberCourse, type ClimberCourse } from '../src/course/course';
@@ -85,7 +85,12 @@ export class NetworkBot {
           question.id,
           question.options.map((option) => option.id),
         );
-        await this.session.submitAnswer(question.id, choice);
+        const outcome = await this.session.submitAnswer(question.id, choice);
+        // After a wrong answer the room shows the right one and refuses answers for a moment,
+        // as a phone's sheet does.
+        if (!outcome.isCorrect) {
+          await new Promise((resolve) => setTimeout(resolve, wrongAnswerLockMs + 50));
+        }
       }
     }
     const steps = Math.round(seconds / physics.fixedStep);
