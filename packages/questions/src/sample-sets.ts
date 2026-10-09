@@ -1,6 +1,6 @@
-import generalKnowledgeData from '../sample-sets/general-knowledge.json';
-import mathsData from '../sample-sets/maths.json';
-import spellingData from '../sample-sets/spelling.json';
+import generalKnowledgeData from '../sample-sets/general-knowledge.json' with { type: 'json' };
+import mathsData from '../sample-sets/maths.json' with { type: 'json' };
+import spellingData from '../sample-sets/spelling.json' with { type: 'json' };
 import { parseQuestionSet, type QuestionSet } from './question';
 
 /** Ids of the bundled sample sets, as used by `?set=`. */

@@ -9,7 +9,7 @@ import {
   type CourseGoal,
   type PlatformerMap,
 } from '@teckin/platformer-kit';
-import courseMapJson from '../../maps/course.json';
+import courseMapJson from '../../maps/course.json' with { type: 'json' };
 import type { ClimberTunables } from '../tunables';
 
 /** A summit on the course: the zone that counts as reaching it and where to respawn. */
