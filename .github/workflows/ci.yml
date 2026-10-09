@@ -105,3 +105,26 @@ jobs:
       - run: |
           for template in infra/*/main.bicep; do az bicep build --file "$template" --stdout > /dev/null; done
           for params in infra/*/*.bicepparam; do az bicep build-params --file "$params" --stdout > /dev/null; done
+
+  security:
+    name: Secret scan and dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      # Every commit, with the false positives listed in .gitleaks.toml. Fails the build.
+      - name: Secret scan (gitleaks)
+        run: |
+          curl --fail --silent --location \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.24.0/gitleaks_8.24.0_linux_x64.tar.gz \
+            | tar --extract --gzip gitleaks
+          ./gitleaks git --redact --no-banner .
+      - uses: pnpm/action-setup@v4
+      # Reports known advisories in production dependencies. It does not fail the build: some
+      # advisories have no fixed version yet; Dependabot (.github/dependabot.yml) proposes the
+      # fixes that exist.
+      - name: Dependency audit
+        continue-on-error: true
+        run: pnpm audit --prod --audit-level=high

@@ -1,0 +1,10 @@
+# Secret scanning (CI job "Secret scan"). The default rules, minus known false positives:
+# Azure built-in role definition ids in Bicep, and placeholder secrets that only local tests use.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Azure role definition ids and test-only placeholder secrets"
+regexTarget = "line"
+regexes = ['''(?i)RoleId\s*=\s*'[0-9a-f-]{36}'$''']
+paths = ['''\.test\.tsx?$''', '''^apps/web/e2e/''']
