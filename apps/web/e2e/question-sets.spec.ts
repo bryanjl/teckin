@@ -1,30 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
+import { openCard, writeMultipleChoice, writeTrueFalse } from './support/editor';
 import { databaseAvailable, e2eSignInOrigin, signUpHost } from './support/sign-in';
-
-/** The open question card (the editor opens one at a time). */
-const openCard = (page: Page) => page.locator('[data-testid="question-card"][data-open="true"]');
-
-async function writeMultipleChoice(page: Page, prompt: string, answers: string[], correct: number) {
-  await page.getByRole('button', { name: '+ Multiple choice' }).click();
-  const card = openCard(page);
-  await card.getByTestId('question-prompt').fill(prompt);
-  for (let index = 2; index < answers.length; index += 1) {
-    await card.getByRole('button', { name: 'Add an answer' }).click();
-  }
-  const inputs = card.getByTestId('question-option');
-  for (const [index, answer] of answers.entries()) await inputs.nth(index).fill(answer);
-  await card.getByRole('radio', { name: `Answer ${correct + 1} is correct` }).check();
-  await card.getByRole('button', { name: 'Done' }).click();
-}
-
-async function writeTrueFalse(page: Page, prompt: string, correct: 'True' | 'False') {
-  await page.getByRole('button', { name: '+ True or false' }).click();
-  const card = openCard(page);
-  await card.getByTestId('question-prompt').fill(prompt);
-  await card.getByRole('radio', { name: correct, exact: true }).check();
-  await card.getByRole('button', { name: 'Done' }).click();
-}
 
 const summaryPrompts = (page: Page) =>
   page.getByTestId('question-summary-prompt').allTextContents();
