@@ -56,7 +56,10 @@ export default function PrivacyPage() {
           Your question sets, games and reports belong to your organisation. Nobody outside it can
           see them.
         </li>
-        <li>A single cookie keeps you signed in. We set no advertising or analytics cookies.</li>
+        <li>
+          Cookies are used only to sign you in and keep you signed in. We set no advertising or
+          analytics cookies.
+        </li>
         <li>
           You can delete your account at any time from Account in the dashboard. That deletes your
           organisation and everything in it: question sets, games, players&apos; answers and

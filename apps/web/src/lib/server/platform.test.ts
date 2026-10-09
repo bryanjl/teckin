@@ -23,6 +23,14 @@ describe('requestAddress', () => {
   it('skips the trusted proxies when there are several (Front Door, then App Service)', () => {
     const headers = new Headers({ 'x-forwarded-for': '6.6.6.6, 198.51.100.7, 147.243.0.1' });
     expect(requestAddress(headers, 2)).toBe('198.51.100.7');
+    // App Service adds ports; they change per connection and are not part of the address.
+    expect(requestAddress(new Headers({ 'x-forwarded-for': '198.51.100.7:51234' }))).toBe(
+      '198.51.100.7',
+    );
+    expect(requestAddress(new Headers({ 'x-forwarded-for': '[2001:db8::1]:443' }))).toBe(
+      '2001:db8::1',
+    );
+    expect(requestAddress(new Headers({ 'x-forwarded-for': '2001:db8::1' }))).toBe('2001:db8::1');
     // Fewer entries than proxies: the first one is the best there is.
     expect(requestAddress(new Headers({ 'x-forwarded-for': '198.51.100.7' }), 2)).toBe(
       '198.51.100.7',

@@ -50,7 +50,15 @@ export function requestAddress(
     .map((entry) => entry.trim())
     .filter(Boolean);
   const caller = entries.length > 0 ? entries[Math.max(0, entries.length - trustedProxyCount)] : '';
-  return caller || headers.get('x-real-ip') || 'unknown';
+  return withoutPort(caller ?? '') || headers.get('x-real-ip') || 'unknown';
+}
+
+/** App Service writes `address:port`; the port changes per connection, so it is dropped. */
+function withoutPort(entry: string): string {
+  const bracketed = /^\[([^\]]+)\](?::\d+)?$/.exec(entry);
+  if (bracketed) return bracketed[1]!;
+  const ipv4WithPort = /^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/.exec(entry);
+  return ipv4WithPort ? ipv4WithPort[1]! : entry;
 }
 
 /** Whether one more sign-in attempt from this network address is allowed now. */
