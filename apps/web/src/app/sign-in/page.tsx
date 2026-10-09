@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { signInWithEmail, signInWithProvider } from '../../auth/actions';
 import { readAuthEnvironment, signInMethods } from '../../auth/auth-environment';
@@ -36,7 +37,7 @@ export default async function SignInPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { callbackUrl, error } = await searchParams;
+  const { callbackUrl, error, new: newHost } = await searchParams;
   const returnPath = safeReturnPath(callbackUrl);
   if (await currentHost()) redirect(returnPath);
 
@@ -47,8 +48,14 @@ export default async function SignInPage({
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-4 py-[max(1.5rem,env(safe-area-inset-top))]">
       <header className="flex flex-col gap-2 text-center">
-        <h1 className="text-3xl font-bold">Sign in to host</h1>
-        <p className="text-ink-muted">New here? Signing in creates your account.</p>
+        <h1 className="text-3xl font-bold">
+          {newHost === '1' ? 'Create your host account' : 'Sign in to host'}
+        </h1>
+        <p className="text-ink-muted">
+          {newHost === '1'
+            ? 'Enter your email and we will send you a sign-in link. No password needed.'
+            : 'New here? Signing in creates your account.'}
+        </p>
       </header>
 
       {errorCode ? (
@@ -103,6 +110,18 @@ export default async function SignInPage({
           Sign-in is not set up on this server yet.
         </p>
       )}
+
+      <p className="text-center text-ink-muted">
+        By signing in you agree to the{' '}
+        <Link href="/terms" className="underline">
+          terms
+        </Link>{' '}
+        and the{' '}
+        <Link href="/privacy" className="underline">
+          privacy notice
+        </Link>
+        .
+      </p>
     </main>
   );
 }
