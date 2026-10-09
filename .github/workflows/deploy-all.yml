@@ -1,0 +1,40 @@
+# Deploys a whole environment in order: platform (Key Vault, database and migrations, email),
+# then realtime, then web, passing the realtime entry address on to the web build. Manual
+# trigger only; nothing runs on push. Each part can also be run on its own. See docs/DEPLOY.md.
+name: Deploy all
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: dev
+        type: choice
+        options: [dev, prod]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  platform:
+    uses: ./.github/workflows/deploy-platform.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
+  realtime:
+    needs: platform
+    uses: ./.github/workflows/deploy-realtime.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
+  web:
+    needs: realtime
+    uses: ./.github/workflows/deploy-web.yml
+    with:
+      environment: ${{ inputs.environment }}
+      realtime_url: ${{ needs.realtime.outputs.realtime_url }}
+    secrets: inherit

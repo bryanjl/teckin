@@ -32,8 +32,14 @@ param identityId string
 @description('Key Vault secret URI holding the Redis connection URL.')
 param redisUrlSecretUri string
 
-@description('Key Vault secret URI of the secret shared with the web app; empty means no game can be launched.')
-param sharedSecretUri string = ''
+@description('Key Vault secret URI of the secret shared with the web app.')
+param sharedSecretUri string
+
+@description('Key Vault secret URI of the database URL; games are recorded for reports there.')
+param databaseUrlSecretUri string
+
+@description('Months players\' answers are kept before the in-process retention job deletes them.')
+param playerDataRetentionMonths int = 12
 
 @description('Application Insights connection string.')
 param appInsightsConnectionString string
@@ -47,38 +53,35 @@ param memory string = '1Gi'
 var publicHostName = '${appName}.${environmentDefaultDomain}'
 var port = 2567
 
-var keyVaultSecrets = concat(
-  [
-    {
-      name: 'redis-url'
-      keyVaultUrl: redisUrlSecretUri
-      identity: identityId
-    }
-  ],
-  empty(sharedSecretUri)
-    ? []
-    : [
-        {
-          name: 'realtime-shared-secret'
-          keyVaultUrl: sharedSecretUri
-          identity: identityId
-        }
-      ]
-)
+var keyVaultSecrets = [
+  {
+    name: 'redis-url'
+    keyVaultUrl: redisUrlSecretUri
+    identity: identityId
+  }
+  {
+    name: 'realtime-shared-secret'
+    keyVaultUrl: sharedSecretUri
+    identity: identityId
+  }
+  {
+    name: 'database-url'
+    keyVaultUrl: databaseUrlSecretUri
+    identity: identityId
+  }
+]
 
-var environmentVariables = concat(
-  [
-    { name: 'NODE_ENV', value: 'production' }
-    { name: 'REALTIME_HOST', value: '0.0.0.0' }
-    { name: 'REALTIME_PORT', value: string(port) }
-    { name: 'REALTIME_PUBLIC_ADDRESS', value: publicHostName }
-    { name: 'REDIS_URL', secretRef: 'redis-url' }
-    { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
-  ],
-  empty(sharedSecretUri)
-    ? []
-    : [{ name: 'REALTIME_SHARED_SECRET', secretRef: 'realtime-shared-secret' }]
-)
+var environmentVariables = [
+  { name: 'NODE_ENV', value: 'production' }
+  { name: 'REALTIME_HOST', value: '0.0.0.0' }
+  { name: 'REALTIME_PORT', value: string(port) }
+  { name: 'REALTIME_PUBLIC_ADDRESS', value: publicHostName }
+  { name: 'REDIS_URL', secretRef: 'redis-url' }
+  { name: 'REALTIME_SHARED_SECRET', secretRef: 'realtime-shared-secret' }
+  { name: 'DATABASE_URL', secretRef: 'database-url' }
+  { name: 'PLAYER_DATA_RETENTION_MONTHS', value: string(playerDataRetentionMonths) }
+  { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
+]
 
 resource app 'Microsoft.App/containerApps@2024-03-01' = {
   name: appName

@@ -1,6 +1,7 @@
-// Phase 3 infrastructure: the Colyseus realtime server on Azure Container Apps, Azure Managed
-// Redis for presence and join codes, Key Vault for secrets, and a container registry. Written
-// during the build and never run by it; see infra/README.md for how Bryan deploys it.
+// The Colyseus realtime server on Azure Container Apps, Azure Managed Redis for presence and
+// join codes, and a container registry. Needs the platform template first (its Key Vault holds
+// the database URL and the shared secret; this template adds the Redis URL). Written during
+// the build and never run by it; see docs/DEPLOY.md for how Bryan deploys it.
 //
 // Scaling (docs/DECISIONS.md): `shardCount` single-replica Container Apps, each with its own
 // host name passed to Colyseus as its public address, all sharing Redis. Any process can look
@@ -43,9 +44,10 @@ param redisHighAvailability bool = false
 @description('Realtime image tag in this environment\'s registry. Empty deploys the shared resources only (the first run, before an image exists).')
 param realtimeImageTag string = ''
 
-@description('Secret shared with the web app (REALTIME_SHARED_SECRET, at least 32 characters). It checks game launches and host passes; empty means no game can be launched.')
-@secure()
-param realtimeSharedSecret string = ''
+@description('Months players\' answers and results are kept before the retention job deletes them.')
+@minValue(1)
+@maxValue(120)
+param playerDataRetentionMonths int = 12
 
 @description('Object id of the deploy identity. When set, it may push images to the registry.')
 param deployPrincipalId string = ''
@@ -123,18 +125,32 @@ module redis '../modules/managed-redis.bicep' = {
   }
 }
 
-module keyVault '../modules/key-vault.bicep' = {
-  name: 'key-vault'
-  params: {
-    location: location
-    vaultName: vaultName
-    tags: tags
-    secretReaderPrincipalIds: [identity.properties.principalId]
-  }
-}
-
+// Created by the platform template.
 resource vault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
   name: vaultName
+}
+
+resource databaseUrlSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' existing = {
+  parent: vault
+  name: 'database-url'
+}
+
+resource realtimeSharedSecretValue 'Microsoft.KeyVault/vaults/secrets@2023-07-01' existing = {
+  parent: vault
+  name: 'realtime-shared-secret'
+}
+
+// Key Vault Secrets User: read secret values, nothing else.
+var secretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
+
+resource identityCanReadSecrets 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(vault.id, identity.id, secretsUserRoleId)
+  scope: vault
+  properties: {
+    principalId: identity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', secretsUserRoleId)
+  }
 }
 
 resource redisDatabase 'Microsoft.Cache/redisEnterprise/databases@2025-04-01' existing = {
@@ -145,19 +161,8 @@ resource redisDatabase 'Microsoft.Cache/redisEnterprise/databases@2025-04-01' ex
 resource redisUrlSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: vault
   name: 'redis-url'
-  dependsOn: [keyVault]
   properties: {
     value: 'rediss://:${redisDatabase.listKeys().primaryKey}@${redis.outputs.hostName}:10000'
-    contentType: 'text/plain'
-  }
-}
-
-resource realtimeSharedSecretValue 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (!empty(realtimeSharedSecret)) {
-  parent: vault
-  name: 'realtime-shared-secret'
-  dependsOn: [keyVault]
-  properties: {
-    value: realtimeSharedSecret
     contentType: 'text/plain'
   }
 }
@@ -192,7 +197,7 @@ resource containerEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
 module shards '../modules/realtime-shard.bicep' = [
   for index in range(1, shardCount): if (!empty(realtimeImageTag)) {
     name: 'realtime-shard-${index}'
-    dependsOn: [identityCanPull, keyVault]
+    dependsOn: [identityCanPull, identityCanReadSecrets]
     params: {
       location: location
       appName: '${namePrefix}-rt-${index}'
@@ -203,7 +208,9 @@ module shards '../modules/realtime-shard.bicep' = [
       registryServer: registry.properties.loginServer
       identityId: identity.id
       redisUrlSecretUri: redisUrlSecret.properties.secretUri
-      sharedSecretUri: empty(realtimeSharedSecret) ? '' : realtimeSharedSecretValue!.properties.secretUri
+      sharedSecretUri: realtimeSharedSecretValue.properties.secretUri
+      databaseUrlSecretUri: databaseUrlSecret.properties.secretUri
+      playerDataRetentionMonths: playerDataRetentionMonths
       appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
       cpu: shardCpu
       memory: shardMemory
@@ -228,5 +235,5 @@ output shardHostNames array = [
 @description('Entry address for the web app (NEXT_PUBLIC_REALTIME_URL): any process can resolve codes and reserve seats; the first is used.')
 output realtimeEntryUrl string = 'https://${namePrefix}-rt-1.${containerEnvironment.properties.defaultDomain}'
 
-@description('Key Vault name.')
-output keyVaultName string = keyVault.outputs.name
+@description('Key Vault name (created by the platform template).')
+output keyVaultName string = vault.name

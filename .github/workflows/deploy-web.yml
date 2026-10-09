@@ -1,7 +1,7 @@
 # Deploys the web app to Azure: Bicep for the infrastructure, then the Next.js standalone
-# package to App Service and the game assets to Blob Storage. Manual trigger only; nothing
-# runs on push. Before the first run, follow infra/README.md to create the resource group,
-# the federated deploy identity and the repository variables used below.
+# package to App Service and the game assets to Blob Storage. Needs "Deploy platform" and
+# "Deploy realtime" first. Manual trigger only; nothing runs on push. Before the first run,
+# follow docs/DEPLOY.md.
 name: Deploy web
 
 on:
@@ -13,6 +13,16 @@ on:
         default: dev
         type: choice
         options: [dev, prod]
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      realtime_url:
+        description: Realtime entry URL (from Deploy realtime); defaults to the REALTIME_URL variable
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -50,7 +60,7 @@ jobs:
         run: |
           for name in CLIENT_ID TENANT_ID SUBSCRIPTION_ID RESOURCE_GROUP DEPLOY_PRINCIPAL_ID; do
             if [ -z "${!name}" ]; then
-              echo "::error::Repository variable AZURE_${name} is not set for this environment. See infra/README.md."
+              echo "::error::Repository variable AZURE_${name} is not set for this environment. See docs/DEPLOY.md."
               exit 1
             fi
           done
@@ -71,7 +81,7 @@ jobs:
           NEXT_OUTPUT: standalone
           NEXT_PUBLIC_CLIMBER_THEME: ${{ vars.CLIMBER_THEME || 'cogspire' }}
           # The realtime entry address printed by "Deploy realtime"; empty means the page's host.
-          NEXT_PUBLIC_REALTIME_URL: ${{ vars.REALTIME_URL }}
+          NEXT_PUBLIC_REALTIME_URL: ${{ inputs.realtime_url || vars.REALTIME_URL }}
       - run: pnpm --filter web assemble:deploy
 
       - uses: azure/login@v2
@@ -82,17 +92,33 @@ jobs:
 
       - name: Deploy infrastructure
         id: infra
+        env:
+          REALTIME_URL: ${{ inputs.realtime_url || vars.REALTIME_URL }}
+          # Only whether it is set: the value itself lives in Key Vault (Deploy platform).
+          EMAIL_CONFIGURED: ${{ secrets.EMAIL_SERVER != '' }}
         run: |
+          if [ -z "$REALTIME_URL" ]; then
+            echo "::error::REALTIME_URL is not set. Run Deploy realtime first and save its entry URL (docs/DEPLOY.md)."
+            exit 1
+          fi
           outputs=$(az deployment group create \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --name "web-${{ github.run_id }}" \
             --template-file infra/web/main.bicep \
             --parameters "infra/web/main.${{ inputs.environment }}.bicepparam" \
             --parameters deployPrincipalId="${{ vars.AZURE_DEPLOY_PRINCIPAL_ID }}" \
+                         realtimeUrl="$REALTIME_URL" \
+                         publicSiteUrl="${{ vars.PUBLIC_SITE_URL }}" \
+                         emailFrom="${{ vars.EMAIL_FROM }}" \
+                         emailConfigured="$EMAIL_CONFIGURED" \
+                         googleClientId="${{ vars.AUTH_GOOGLE_ID }}" \
+                         microsoftClientId="${{ vars.AUTH_MICROSOFT_ENTRA_ID_ID }}" \
+                         microsoftIssuer="${{ vars.AUTH_MICROSOFT_ENTRA_ID_ISSUER }}" \
             --query properties.outputs --output json)
           echo "web_app=$(echo "$outputs" | jq -r .webAppName.value)" >> "$GITHUB_OUTPUT"
           echo "storage=$(echo "$outputs" | jq -r .assetsStorageAccountName.value)" >> "$GITHUB_OUTPUT"
           echo "site_url=$(echo "$outputs" | jq -r .siteUrl.value)" >> "$GITHUB_OUTPUT"
+          echo "Hosts sign in at: $(echo "$outputs" | jq -r .publicSiteUrl.value)"
 
       - name: Upload game assets
         # A new role assignment can take a few minutes to apply, so retry on the first deploy.

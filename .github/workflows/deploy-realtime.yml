@@ -1,7 +1,7 @@
-# Deploys the realtime server to Azure: Bicep for the registry, Key Vault, Managed Redis and
-# Container Apps environment, then the server image, then one Container App per realtime
-# process. Manual trigger only; nothing runs on push. Before the first run, follow
-# infra/README.md (resource group, federated deploy identity, repository variables).
+# Deploys the realtime server to Azure: Bicep for the registry, Managed Redis and Container Apps
+# environment, then the server image, then one Container App per realtime process. Needs
+# "Deploy platform" first (Key Vault, database). Manual trigger only; nothing runs on push.
+# Before the first run, follow docs/DEPLOY.md.
 name: Deploy realtime
 
 on:
@@ -13,6 +13,15 @@ on:
         default: dev
         type: choice
         options: [dev, prod]
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+    outputs:
+      realtime_url:
+        description: Realtime entry URL for the web app
+        value: ${{ jobs.deploy.outputs.realtime_url }}
 
 permissions:
   contents: read
@@ -31,6 +40,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: ${{ inputs.environment }}
+    outputs:
+      realtime_url: ${{ steps.apps.outputs.entry_url }}
     steps:
       - name: Check branch
         if: github.ref != 'refs/heads/main'
@@ -48,7 +59,7 @@ jobs:
         run: |
           for name in CLIENT_ID TENANT_ID SUBSCRIPTION_ID RESOURCE_GROUP DEPLOY_PRINCIPAL_ID; do
             if [ -z "${!name}" ]; then
-              echo "::error::Repository variable AZURE_${name} is not set for this environment. See infra/README.md."
+              echo "::error::Repository variable AZURE_${name} is not set for this environment. See docs/DEPLOY.md."
               exit 1
             fi
           done
@@ -72,9 +83,6 @@ jobs:
       # First pass: everything except the apps, so the registry exists before the image does.
       - name: Deploy shared resources
         id: shared
-        env:
-          # The same value the web app gets; it checks launches and host passes.
-          REALTIME_SHARED_SECRET: ${{ secrets.REALTIME_SHARED_SECRET }}
         run: |
           outputs=$(az deployment group create \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
@@ -82,7 +90,6 @@ jobs:
             --template-file infra/realtime/main.bicep \
             --parameters "infra/realtime/main.${{ inputs.environment }}.bicepparam" \
             --parameters deployPrincipalId="${{ vars.AZURE_DEPLOY_PRINCIPAL_ID }}" \
-                         realtimeSharedSecret="$REALTIME_SHARED_SECRET" \
                          realtimeImageTag='' \
             --query properties.outputs --output json)
           echo "registry=$(echo "$outputs" | jq -r .registryName.value)" >> "$GITHUB_OUTPUT"
@@ -105,8 +112,6 @@ jobs:
 
       - name: Deploy realtime processes
         id: apps
-        env:
-          REALTIME_SHARED_SECRET: ${{ secrets.REALTIME_SHARED_SECRET }}
         run: |
           outputs=$(az deployment group create \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
@@ -114,7 +119,6 @@ jobs:
             --template-file infra/realtime/main.bicep \
             --parameters "infra/realtime/main.${{ inputs.environment }}.bicepparam" \
             --parameters deployPrincipalId="${{ vars.AZURE_DEPLOY_PRINCIPAL_ID }}" \
-                         realtimeSharedSecret="$REALTIME_SHARED_SECRET" \
                          realtimeImageTag="${{ github.sha }}" \
             --query properties.outputs --output json)
           echo "hosts=$(echo "$outputs" | jq -r '.shardHostNames.value | join(" ")')" >> "$GITHUB_OUTPUT"
@@ -134,4 +138,4 @@ jobs:
             fi
           done
           echo "Realtime entry URL: ${{ steps.apps.outputs.entry_url }}"
-          echo "Set the REALTIME_URL variable of this environment to it, then run Deploy web."
+          echo "Set the REALTIME_URL variable of this environment to it (Deploy all passes it on by itself), then run Deploy web."

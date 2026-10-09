@@ -8,4 +8,4 @@ param shardCpu = '1'
 param shardMemory = '2Gi'
 param redisSkuName = 'Balanced_B1'
 param redisHighAvailability = true
-// The deploy workflow passes realtimeImageTag, realtimeSharedSecret and deployPrincipalId.
+// The deploy workflow passes realtimeImageTag and deployPrincipalId.
