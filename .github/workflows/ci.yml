@@ -40,7 +40,7 @@ jobs:
           --health-cmd "pg_isready -U teckin" --health-interval 5s --health-timeout 3s
           --health-retries 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:
@@ -81,7 +81,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       # Builds the image the realtime deploy ships (never pushed) and checks it starts.
       - run: docker build --file apps/realtime/Dockerfile --tag teckin-realtime:ci .
       - name: Smoke test
@@ -99,7 +99,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       # Compiles and lints the templates offline; nothing signs in to Azure.
       - run: az bicep install
       - run: |
@@ -111,7 +111,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       # Every commit, with the false positives listed in .gitleaks.toml. Fails the build.
