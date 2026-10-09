@@ -33,13 +33,24 @@ export function signInRateLimits() {
 }
 
 /**
- * The caller's address for rate limiting. One proxy sits in front of the app when deployed
- * (App Service's front end) and appends the address it saw, so the last `X-Forwarded-For` entry
- * is trusted; earlier entries are whatever the caller sent.
+ * The caller's address for rate limiting. Each trusted proxy in front of the app appends the
+ * address it saw to `X-Forwarded-For`, so the entry `TRUSTED_PROXY_COUNT` places from the end
+ * is the caller as the outermost trusted proxy saw it; earlier entries are whatever the caller
+ * sent. Locally and behind one proxy that is the last entry (count 1, the default). Deployed
+ * behind Azure Front Door and App Service's front end it is the second to last (count 2,
+ * which the web Bicep sets); with count 1 there, everyone near one Front Door edge would share
+ * a single limit.
  */
-export function requestAddress(headers: Headers): string {
-  const nearest = headers.get('x-forwarded-for')?.split(',').at(-1)?.trim();
-  return nearest || headers.get('x-real-ip') || 'unknown';
+export function requestAddress(
+  headers: Headers,
+  trustedProxyCount: number = limitFromEnvironment('TRUSTED_PROXY_COUNT', 1),
+): string {
+  const entries = (headers.get('x-forwarded-for') ?? '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  const caller = entries.length > 0 ? entries[Math.max(0, entries.length - trustedProxyCount)] : '';
+  return caller || headers.get('x-real-ip') || 'unknown';
 }
 
 /** Whether one more sign-in attempt from this network address is allowed now. */

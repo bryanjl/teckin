@@ -20,6 +20,15 @@ describe('requestAddress', () => {
     expect(requestAddress(headers({}))).toBe('unknown');
   });
 
+  it('skips the trusted proxies when there are several (Front Door, then App Service)', () => {
+    const headers = new Headers({ 'x-forwarded-for': '6.6.6.6, 198.51.100.7, 147.243.0.1' });
+    expect(requestAddress(headers, 2)).toBe('198.51.100.7');
+    // Fewer entries than proxies: the first one is the best there is.
+    expect(requestAddress(new Headers({ 'x-forwarded-for': '198.51.100.7' }), 2)).toBe(
+      '198.51.100.7',
+    );
+  });
+
   it('has sign-in limits that a class sharing one address does not hit', () => {
     expect(signInRateLimits().perAddress.limit).toBeGreaterThanOrEqual(20);
     expect(signInRateLimits().perEmail.limit).toBe(5);
