@@ -84,7 +84,7 @@ jobs:
           NEXT_PUBLIC_REALTIME_URL: ${{ inputs.realtime_url || vars.REALTIME_URL }}
       - run: pnpm --filter web assemble:deploy
 
-      - uses: azure/login@v2
+      - uses: azure/login@v3
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
