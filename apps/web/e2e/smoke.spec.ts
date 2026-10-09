@@ -13,6 +13,16 @@ test('landing page offers sign-up, joining and a solo climb', async ({ page }) =
   await expect(page.getByTestId('game-root')).toHaveAttribute('data-game-status', 'running');
 });
 
+test('every page sends the baseline security headers', async ({ page }) => {
+  for (const path of ['/', '/sign-in', '/join']) {
+    const headers = (await page.request.get(path)).headers();
+    expect(headers['x-frame-options']).toBe('DENY');
+    expect(headers['x-content-type-options']).toBe('nosniff');
+    expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
+    expect(headers['permissions-policy']).toContain('camera=()');
+  }
+});
+
 test('landing page fits a phone screen without horizontal scroll', async ({ page }) => {
   await page.goto('/');
   const overflow = await page.evaluate(
