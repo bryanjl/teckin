@@ -196,10 +196,13 @@ Shared packages never import from a game. Games import from shared packages.
 
 ## Deploying
 
-Nothing deploys automatically. `infra/` holds the Azure Bicep templates;
-`.github/workflows/deploy-realtime.yml` (realtime server, Redis, Key Vault) and
-`.github/workflows/deploy-web.yml` (web app) deploy when started by hand from the Actions tab,
-realtime first. See [`infra/README.md`](infra/README.md) for the one-time Azure setup.
+Nothing deploys automatically. `infra/` holds the Azure Bicep templates and four workflows
+deploy when started by hand from the Actions tab: **Deploy platform** (Key Vault, PostgreSQL
+and migrations, Communication Services Email), **Deploy realtime** (Container Apps, Redis,
+registry), **Deploy web** (App Service, Blob Storage, Front Door) and **Deploy all** (the three
+in order). **[`docs/DEPLOY.md`](docs/DEPLOY.md)** has the one-time Azure setup, the
+step-by-step first deployment and every environment variable and secret each app needs;
+[`infra/README.md`](infra/README.md) explains how the pieces fit together.
 
 The realtime server's container image builds from the repository root:
 `docker build -f apps/realtime/Dockerfile -t teckin-realtime .`
