@@ -19,6 +19,19 @@ const nextConfig: NextConfig = {
     '@teckin/ui',
   ],
   poweredByHeader: false,
+  // `next dev` blocks its own scripts for any origin other than localhost, so a phone opening
+  // the laptop's address gets a blank game page. Allow private-network addresses in
+  // development, plus any extra hosts listed in DEV_ALLOWED_ORIGINS (comma-separated).
+  allowedDevOrigins: [
+    '192.168.*.*',
+    '10.*.*.*',
+    '172.*.*.*',
+    '*.local',
+    ...(process.env.DEV_ALLOWED_ORIGINS ?? '')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+  ],
   // Baseline headers on every response; the player pages add a strict CSP in src/proxy.ts.
   async headers() {
     return [
