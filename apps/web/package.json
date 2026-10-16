@@ -29,7 +29,7 @@
     "@teckin/ui": "workspace:*",
     "next": "16.4.0",
     "next-auth": "5.0.0-beta.32",
-    "nodemailer": "8.0.11",
+    "nodemailer": "10.1.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "uqr": "0.1.3",
