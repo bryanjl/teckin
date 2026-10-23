@@ -15,8 +15,8 @@
     "load-test": "tsx scripts/load-test.ts"
   },
   "dependencies": {
-    "@colyseus/core": "0.18.18",
-    "@colyseus/redis-driver": "0.18.4",
+    "@colyseus/core": "0.18.19",
+    "@colyseus/redis-driver": "0.18.5",
     "@colyseus/redis-presence": "0.18.5",
     "@colyseus/ws-transport": "0.18.4",
     "@teckin/climber": "workspace:*",
@@ -25,7 +25,7 @@
     "@teckin/nicknames": "workspace:*",
     "@teckin/questions": "workspace:*",
     "@teckin/room-core": "workspace:*",
-    "zod": "4.6.5"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@colyseus/sdk": "0.18.5",
@@ -34,9 +34,9 @@
     "@teckin/session": "workspace:*",
     "@types/node": "22.20.5",
     "esbuild": "0.28.2",
-    "eslint": "10.12.0",
+    "eslint": "10.13.0",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
-    "vitest": "5.0.3"
+    "vitest": "5.0.5"
   }
 }
