@@ -41,7 +41,7 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
@@ -121,7 +121,7 @@ jobs:
             https://github.com/gitleaks/gitleaks/releases/download/v8.24.0/gitleaks_8.24.0_linux_x64.tar.gz \
             | tar --extract --gzip gitleaks
           ./gitleaks git --redact --no-banner .
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
       # Reports known advisories in production dependencies. It does not fail the build: some
       # advisories have no fixed version yet; Dependabot (.github/dependabot.yml) proposes the
       # fixes that exist.
