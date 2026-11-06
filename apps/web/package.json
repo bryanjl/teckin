@@ -17,7 +17,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@colyseus/sdk": "0.18.5",
+    "@colyseus/sdk": "0.18.9",
     "@teckin/climber": "workspace:*",
     "@teckin/db": "workspace:*",
     "@teckin/engine-core": "workspace:*",
@@ -27,28 +27,28 @@
     "@teckin/room-core": "workspace:*",
     "@teckin/session": "workspace:*",
     "@teckin/ui": "workspace:*",
-    "next": "16.4.0",
+    "next": "16.4.4",
     "next-auth": "5.0.0-beta.32",
     "nodemailer": "8.0.11",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "uqr": "0.1.3",
-    "zod": "4.6.5"
+    "zod": "4.6.7"
   },
   "devDependencies": {
-    "@playwright/test": "1.63.0",
-    "@tailwindcss/postcss": "4.3.3",
+    "@playwright/test": "1.64.1",
+    "@tailwindcss/postcss": "4.3.4",
     "@teckin/config": "workspace:*",
     "@types/node": "22.20.5",
     "@types/nodemailer": "8.0.2",
     "@types/pngjs": "6.0.5",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "eslint": "10.12.0",
+    "eslint": "10.14.0",
     "jsqr": "1.4.0",
     "pngjs": "7.0.0",
-    "tailwindcss": "4.3.3",
+    "tailwindcss": "4.3.4",
     "typescript": "6.0.3",
-    "vitest": "5.0.3"
+    "vitest": "5.1.0"
   }
 }
